@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkGo – Mina förfrågningar</title>
+    <link rel="stylesheet" href="../css/tokens.css">
+    <script src="./config.js"></script>
+    <style>
+        body {
+            padding: var(--l);
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 840px;
+            margin: 0 auto;
+        }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--muted);
+            border-radius: 12px;
+            padding: var(--xl);
+            margin-bottom: var(--l);
+        }
+        .section {
+            margin-bottom: var(--xxl);
+        }
+        .section h2 {
+            color: var(--primary);
+            margin-bottom: var(--l);
+            border-bottom: 1px solid var(--muted);
+            padding-bottom: var(--m);
+        }
+        .booking-card {
+            background: var(--muted);
+            border-radius: 8px;
+            padding: var(--l);
+            margin-bottom: var(--m);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .booking-info h4 {
+            margin: 0 0 var(--s) 0;
+            color: var(--text);
+        }
+        .booking-info p {
+            margin: 0 0 var(--s) 0;
+            color: var(--subtle);
+            font-size: 0.9em;
+        }
+        .booking-info .time {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .booking-actions {
+            display: flex;
+            gap: var(--m);
+            flex-shrink: 0;
+        }
+        .booking-actions button {
+            padding: var(--m) var(--l);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            border: none;
+        }
+        .booking-actions button.accept {
+            background: var(--success);
+            color: var(--bg);
+        }
+        .booking-actions button.decline {
+            background: var(--danger);
+            color: var(--bg);
+        }
+        .booking-actions button:disabled {
+            background: var(--muted);
+            color: var(--subtle);
+            cursor: not-allowed;
+        }
+        .toast {
+            position: fixed;
+            top: var(--l);
+            right: var(--l);
+            background: var(--success);
+            color: var(--bg);
+            padding: var(--m) var(--l);
+            border-radius: 6px;
+            display: none;
+            z-index: 1000;
+        }
+        .toast.error {
+            background: var(--danger);
+        }
+        .debug {
+            background: var(--muted);
+            border-radius: 6px;
+            padding: var(--m);
+            margin-top: var(--l);
+            font-family: monospace;
+            font-size: 0.8em;
+            white-space: pre-wrap;
+        }
+        .error-message {
+            color: var(--danger);
+            text-align: center;
+            padding: var(--xl);
+        }
+        .error-message a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        .error-message a:hover {
+            text-decoration: underline;
+        }
+        .empty-state {
+            text-align: center;
+            color: var(--subtle);
+            padding: var(--xl);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LinkGo – Mina förfrågningar</h1>
+        
+        <div class="card" id="card-content">
+            <!-- Content will be loaded here -->
+        </div>
+        
+        <div class="toast" id="toast"></div>
+        
+        <div class="debug">
+            <div>Session: <pre id="out-session"></pre></div>
+            <div>Profile: <pre id="out-profile"></pre></div>
+            <div>Debug: <pre id="out-debug"></pre></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import supa from '../js/supa.js';
+
+        // DOM elements
+        const cardContent = document.getElementById('card-content');
+        const toast = document.getElementById('toast');
+        const outSession = document.getElementById('out-session');
+        const outProfile = document.getElementById('out-profile');
+        const outDebug = document.getElementById('out-debug');
+
+        // Helper functions
+        function set(id, val) {
+            const el = document.getElementById(id);
+            if (el) {
+                if (typeof val === 'object') {
+                    el.textContent = JSON.stringify(val, null, 2);
+                } else {
+                    el.textContent = val;
+                }
+            }
+        }
+
+        function show(el) {
+            if (typeof el === 'string') el = document.getElementById(el);
+            if (el) el.style.display = 'block';
+        }
+
+        function hide(el) {
+            if (typeof el === 'string') el = document.getElementById(el);
+            if (el) el.style.display = 'none';
+        }
+
+        function showToast(message, isError = false) {
+            toast.textContent = message;
+            toast.className = isError ? 'toast error' : 'toast';
+            show(toast);
+            setTimeout(() => hide(toast), 3000);
+        }
+
+        // Format datetime range in local time
+        function fmtDateTimeRange(startTs, endTs) {
+            try {
+                const start = new Date(startTs);
+                const end = new Date(endTs);
+                
+                const startStr = start.toLocaleString('sv-SE', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                const endStr = end.toLocaleString('sv-SE', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                return `${startStr} - ${endStr}`;
+            } catch (error) {
+                return `${startTs} - ${endTs}`;
+            }
+        }
+
+        // Session and role guard
+        async function checkAuth() {
+            try {
+                const { data: session, error: sessionError } = await supa.Auth.getSession();
+                set('out-session', session ? JSON.stringify(session, null, 2) : 'No session');
+                
+                if (sessionError || !session) {
+                    showNotLoggedIn();
+                    return false;
+                }
+
+                const { data: me, error: profileError } = await supa.Profiles.getMyProfile();
+                set('out-profile', me ? JSON.stringify(me, null, 2) : 'No profile');
+                
+                if (profileError || !me) {
+                    showError('Kunde inte ladda profil');
+                    return false;
+                }
+
+                if (me.role !== 'talent') {
+                    showNotTalent();
+                    return false;
+                }
+
+                return { session, me };
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                showError('Autentisering misslyckades');
+                return false;
+            }
+        }
+
+        function showNotLoggedIn() {
+            cardContent.innerHTML = `
+                <div class="error-message">
+                    Du är inte inloggad. <a href="login.html">Logga in på login.html</a>.
+                </div>
+            `;
+        }
+
+        function showNotTalent() {
+            cardContent.innerHTML = `
+                <div class="error-message">
+                    Endast talents har åtkomst till denna sida.
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            cardContent.innerHTML = `
+                <div class="error-message">
+                    ${message}
+                </div>
+            `;
+        }
+
+        // Load incoming requests (status = 'requested')
+        async function loadIncomingRequests(talentId) {
+            try {
+                const { data, error } = await supa.client
+                    .from('bookings')
+                    .select('id, manager_id, talent_id, role_at_booking, start_ts, end_ts, location, message, status, created_at')
+                    .eq('talent_id', talentId)
+                    .eq('status', 'requested')
+                    .order('created_at', { ascending: false })
+                    .limit(50);
+
+                if (error) throw error;
+                return data || [];
+            } catch (error) {
+                console.error('Failed to load incoming requests:', error);
+                showToast(`Kunde inte ladda inkommande förfrågningar: ${error.message}`, true);
+                return [];
+            }
+        }
+
+        // Load upcoming bookings (status = 'accepted' or 'confirmed', future start_at)
+        async function loadUpcomingBookings(talentId) {
+            try {
+                const now = new Date().toISOString();
+                
+                const { data, error } = await supa.client
+                    .from('bookings')
+                    .select('id, manager_id, talent_id, role_at_booking, start_ts, end_ts, location, message, status, created_at')
+                    .eq('talent_id', talentId)
+                    .in('status', ['accepted', 'confirmed'])
+                    .gte('start_ts', now)
+                    .order('start_ts', { ascending: true })
+                    .limit(50);
+
+                if (error) throw error;
+                return data || [];
+            } catch (error) {
+                console.error('Failed to load upcoming bookings:', error);
+                showToast(`Kunde inte ladda kommande bokningar: ${error.message}`, true);
+                return [];
+            }
+        }
+
+        // Respond to booking (accept/decline)
+        async function respondToBooking(bookingId, action, talentId) {
+            try {
+                // Extra client-side security: verify talent_id matches
+                const { data: booking, error: fetchError } = await supa.client
+                    .from('bookings')
+                    .select('talent_id, status')
+                    .eq('id', bookingId)
+                    .single();
+
+                if (fetchError) throw fetchError;
+                if (!booking || booking.talent_id !== talentId) {
+                    throw new Error('Du har inte behörighet att svara på denna bokning');
+                }
+                if (booking.status !== 'requested') {
+                    throw new Error('Bokningen är redan besvarad');
+                }
+
+                // Update booking status
+                const { data, error } = await supa.client
+                    .from('bookings')
+                    .update({ 
+                        status: action === 'accept' ? 'accepted' : 'declined',
+                        responded_at: new Date().toISOString()
+                    })
+                    .eq('id', bookingId)
+                    .eq('talent_id', talentId)
+                    .select()
+                    .single();
+
+                if (error) throw error;
+                return data;
+            } catch (error) {
+                console.error('Failed to respond to booking:', error);
+                throw error;
+            }
+        }
+
+        // Render incoming requests section
+        function renderIncomingRequests(requests) {
+            if (requests.length === 0) {
+                return `
+                    <div class="section">
+                        <h2>Inkommande (requested)</h2>
+                        <div class="empty-state">Inga inkommande förfrågningar</div>
+                    </div>
+                `;
+            }
+
+            const requestsHtml = requests.map(booking => `
+                <div class="booking-card" data-booking-id="${booking.id}">
+                    <div class="booking-info">
+                        <h4>Från: ${booking.manager_id}</h4>
+                        <p class="time">${fmtDateTimeRange(booking.start_ts, booking.end_ts)}</p>
+                        <p>Roll: ${booking.role_at_booking}</p>
+                        ${booking.location ? `<p>Plats: ${booking.location}</p>` : ''}
+                        ${booking.message ? `<p>Meddelande: ${booking.message}</p>` : ''}
+                    </div>
+                    <div class="booking-actions">
+                        <button class="accept" onclick="handleAccept('${booking.id}')">Acceptera</button>
+                        <button class="decline" onclick="handleDecline('${booking.id}')">Avvisa</button>
+                    </div>
+                </div>
+            `).join('');
+
+            return `
+                <div class="section">
+                    <h2>Inkommande (requested)</h2>
+                    ${requestsHtml}
+                </div>
+            `;
+        }
+
+        // Render upcoming bookings section
+        function renderUpcomingBookings(bookings) {
+            if (bookings.length === 0) {
+                return `
+                    <div class="section">
+                        <h2>Kommande (accepted/confirmed)</h2>
+                        <div class="empty-state">Inga kommande bokningar</div>
+                    </div>
+                `;
+            }
+
+            const bookingsHtml = bookings.map(booking => `
+                <div class="booking-card">
+                    <div class="booking-info">
+                        <h4>Från: ${booking.manager_id}</h4>
+                        <p class="time">${fmtDateTimeRange(booking.start_ts, booking.end_ts)}</p>
+                        <p>Roll: ${booking.role_at_booking} • Status: ${booking.status}</p>
+                        ${booking.location ? `<p>Plats: ${booking.location}</p>` : ''}
+                        ${booking.message ? `<p>Meddelande: ${booking.message}</p>` : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            return `
+                <div class="section">
+                    <h2>Kommande (accepted/confirmed)</h2>
+                    ${bookingsHtml}
+                </div>
+            `;
+        }
+
+        // Handle accept action
+        async function handleAccept(bookingId) {
+            const talentId = window.currentTalentId;
+            if (!talentId) {
+                showToast('Session fel', true);
+                return;
+            }
+
+            try {
+                await respondToBooking(bookingId, 'accept', talentId);
+                showToast('Förfrågan accepterad');
+                
+                // Disable buttons for this booking
+                const card = document.querySelector(`[data-booking-id="${bookingId}"]`);
+                if (card) {
+                    const buttons = card.querySelectorAll('button');
+                    buttons.forEach(btn => btn.disabled = true);
+                }
+                
+                // Reload data
+                await loadAndRenderBookings();
+            } catch (error) {
+                showToast(`Kunde inte acceptera: ${error.message}`, true);
+            }
+        }
+
+        // Handle decline action
+        async function handleDecline(bookingId) {
+            const talentId = window.currentTalentId;
+            if (!talentId) {
+                showToast('Session fel', true);
+                return;
+            }
+
+            try {
+                await respondToBooking(bookingId, 'decline', talentId);
+                showToast('Förfrågan avvisad');
+                
+                // Disable buttons for this booking
+                const card = document.querySelector(`[data-booking-id="${bookingId}"]`);
+                if (card) {
+                    const buttons = card.querySelectorAll('button');
+                    buttons.forEach(btn => btn.disabled = true);
+                }
+                
+                // Reload data
+                await loadAndRenderBookings();
+            } catch (error) {
+                showToast(`Kunde inte avvisa: ${error.message}`, true);
+            }
+        }
+
+        // Load and render all bookings
+        async function loadAndRenderBookings() {
+            const talentId = window.currentTalentId;
+            if (!talentId) return;
+
+            set('out-debug', 'Loading bookings...');
+
+            try {
+                const [incomingRequests, upcomingBookings] = await Promise.all([
+                    loadIncomingRequests(talentId),
+                    loadUpcomingBookings(talentId)
+                ]);
+
+                set('out-debug', `Loaded ${incomingRequests.length} incoming, ${upcomingBookings.length} upcoming`);
+
+                cardContent.innerHTML = 
+                    renderIncomingRequests(incomingRequests) + 
+                    renderUpcomingBookings(upcomingBookings);
+            } catch (error) {
+                console.error('Failed to load bookings:', error);
+                showToast(`Kunde inte ladda bokningar: ${error.message}`, true);
+            }
+        }
+
+        // Initialize the application
+        async function init() {
+            const authResult = await checkAuth();
+            if (!authResult) return;
+
+            const { session, me } = authResult;
+            window.currentTalentId = session.user.id;
+            
+            await loadAndRenderBookings();
+        }
+
+        // Make functions globally available for onclick handlers
+        window.handleAccept = handleAccept;
+        window.handleDecline = handleDecline;
+
+        // Start the application
+        init();
+    </script>
+</body>
+</html>

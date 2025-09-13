@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkGo – Katalog</title>
+    <link rel="stylesheet" href="../css/tokens.css">
+    <script src="./config.js"></script>
+    <style>
+        body {
+            padding: var(--l);
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 840px;
+            margin: 0 auto;
+        }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--muted);
+            border-radius: 12px;
+            padding: var(--xl);
+            margin-bottom: var(--l);
+        }
+        .filters {
+            display: flex;
+            gap: var(--m);
+            flex-wrap: wrap;
+            align-items: end;
+            margin-bottom: var(--l);
+        }
+        .filters input, .filters select {
+            flex: 1;
+            min-width: 120px;
+        }
+        .filters button {
+            background: var(--primary);
+            color: var(--bg);
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .filters button:disabled {
+            background: var(--muted);
+            color: var(--subtle);
+            cursor: not-allowed;
+        }
+        .dialog {
+            background: var(--surface);
+            border: 1px solid var(--muted);
+            border-radius: 12px;
+            padding: var(--xl);
+            margin-bottom: var(--l);
+            display: none;
+        }
+        .dialog h3 {
+            margin-top: 0;
+            color: var(--primary);
+        }
+        .dialog-fields {
+            display: grid;
+            gap: var(--m);
+            margin-bottom: var(--l);
+        }
+        .dialog-fields input, .dialog-fields select, .dialog-fields textarea {
+            width: 100%;
+        }
+        .dialog-fields textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .dialog-buttons {
+            display: flex;
+            gap: var(--m);
+            justify-content: flex-end;
+        }
+        .dialog-buttons button {
+            padding: var(--m) var(--l);
+        }
+        .dialog-buttons button[type="submit"] {
+            background: var(--success);
+            color: var(--bg);
+            border: none;
+        }
+        .dialog-buttons button[type="button"] {
+            background: var(--muted);
+            color: var(--text);
+            border: none;
+        }
+        .talent-card {
+            background: var(--muted);
+            border-radius: 8px;
+            padding: var(--l);
+            margin-bottom: var(--m);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .talent-info h4 {
+            margin: 0 0 var(--s) 0;
+            color: var(--text);
+        }
+        .talent-info p {
+            margin: 0;
+            color: var(--subtle);
+            font-size: 0.9em;
+        }
+        .talent-actions button {
+            background: var(--primary);
+            color: var(--bg);
+            border: none;
+            padding: var(--m) var(--l);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .talent-actions button:disabled {
+            background: var(--muted);
+            color: var(--subtle);
+            cursor: not-allowed;
+        }
+        .toast {
+            position: fixed;
+            top: var(--l);
+            right: var(--l);
+            background: var(--success);
+            color: var(--bg);
+            padding: var(--m) var(--l);
+            border-radius: 6px;
+            display: none;
+            z-index: 1000;
+        }
+        .toast.error {
+            background: var(--danger);
+        }
+        .debug {
+            background: var(--muted);
+            border-radius: 6px;
+            padding: var(--m);
+            margin-top: var(--l);
+            font-family: monospace;
+            font-size: 0.8em;
+            white-space: pre-wrap;
+        }
+        .error-message {
+            color: var(--danger);
+            text-align: center;
+            padding: var(--xl);
+        }
+        .error-message a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        .error-message a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LinkGo – Katalog</h1>
+        
+        <div class="card" id="card-content">
+            <!-- Content will be loaded here -->
+        </div>
+        
+        <div class="toast" id="toast"></div>
+        
+        <div class="debug">
+            <div>Session: <pre id="out-session"></pre></div>
+            <div>Profile: <pre id="out-profile"></pre></div>
+            <div>Debug: <pre id="out-debug"></pre></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import supa from '../js/supa.js';
+
+        // State management
+        const state = {
+            filters: {
+                q: '',
+                region: '',
+                limit: 10
+            },
+            page: {
+                cursorNext: null,
+                cursorPrev: null,
+                offset: 0,
+                total: 0
+            },
+            requestedTalents: new Set() // Track which talents have been requested
+        };
+
+        // DOM elements
+        const cardContent = document.getElementById('card-content');
+        const toast = document.getElementById('toast');
+        const outSession = document.getElementById('out-session');
+        const outProfile = document.getElementById('out-profile');
+        const outDebug = document.getElementById('out-debug');
+
+        // Helper functions
+        function set(id, val) {
+            const el = document.getElementById(id);
+            if (el) {
+                if (typeof val === 'object') {
+                    el.value = JSON.stringify(val);
+                } else {
+                    el.value = val;
+                }
+            }
+        }
+
+        function show(el) {
+            if (typeof el === 'string') el = document.getElementById(el);
+            if (el) el.style.display = 'block';
+        }
+
+        function hide(el) {
+            if (typeof el === 'string') el = document.getElementById(el);
+            if (el) el.style.display = 'none';
+        }
+
+        function fmtRoles(talent) {
+            const roles = [];
+            if (talent.is_referee) roles.push('referee');
+            if (talent.is_coach) roles.push('coach');
+            return roles.length > 0 ? roles.join(' / ') : 'okänd roll';
+        }
+
+        function showToast(message, isError = false) {
+            toast.textContent = message;
+            toast.className = isError ? 'toast error' : 'toast';
+            show(toast);
+            setTimeout(() => hide(toast), 3000);
+        }
+
+        // Load filters from localStorage
+        function loadFilters() {
+            const saved = localStorage.getItem('browse.filters');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    state.filters = { ...state.filters, ...parsed };
+                } catch (e) {
+                    console.warn('Failed to parse saved filters:', e);
+                }
+            }
+        }
+
+        // Save filters to localStorage
+        function saveFilters() {
+            localStorage.setItem('browse.filters', JSON.stringify(state.filters));
+        }
+
+        // Session and role guard
+        async function checkAuth() {
+            try {
+                const { data: session, error: sessionError } = await supa.Auth.getSession();
+                set('out-session', session ? JSON.stringify(session, null, 2) : 'No session');
+                
+                if (sessionError || !session) {
+                    showNotLoggedIn();
+                    return false;
+                }
+
+                const { data: me, error: profileError } = await supa.Profiles.getMyProfile();
+                set('out-profile', me ? JSON.stringify(me, null, 2) : 'No profile');
+                
+                if (profileError || !me) {
+                    showError('Kunde inte ladda profil');
+                    return false;
+                }
+
+                if (me.role !== 'manager') {
+                    showNotManager();
+                    return false;
+                }
+
+                return true;
+            } catch (error) {
+                console.error('Auth check failed:', error);
+                showError('Autentisering misslyckades');
+                return false;
+            }
+        }
+
+        function showNotLoggedIn() {
+            cardContent.innerHTML = `
+                <div class="error-message">
+                    Du är inte inloggad. <a href="login.html">Logga in på login.html</a>.
+                </div>
+            `;
+        }
+
+        function showNotManager() {
+            cardContent.innerHTML = `
+                <div class="error-message">
+                    Endast managers har åtkomst till denna sida.
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            cardContent.innerHTML = `
+                <div class="error-message">
+                    ${message}
+                </div>
+            `;
+        }
+
+        // Primary API: supa.Catalog.list with cursor pagination
+        async function searchTalentsPrimary() {
+            try {
+                // Simulate the expected API format with cursor pagination
+                const { data, error } = await supa.Catalog.list({
+                    q: state.filters.q || null,
+                    region: state.filters.region || null,
+                    limit: state.filters.limit,
+                    offset: state.page.offset
+                });
+
+                if (error) {
+                    throw error;
+                }
+
+                // Transform to expected format
+                return {
+                    items: data || [],
+                    nextCursor: data && data.length === state.filters.limit ? 
+                        (state.page.offset + state.filters.limit).toString() : null,
+                    prevCursor: state.page.offset > 0 ? 
+                        Math.max(0, state.page.offset - state.filters.limit).toString() : null
+                };
+            } catch (error) {
+                console.warn('Primary API failed, trying fallback:', error);
+                return null;
+            }
+        }
+
+        // Fallback API: direct v_talent_catalog query
+        async function searchTalentsFallback() {
+            try {
+                let query = supa.client
+                    .from('v_talent_catalog')
+                    .select('id, full_name, region, is_referee, is_coach', { count: 'exact' })
+                    .order('full_name', { ascending: true })
+                    .range(state.page.offset, state.page.offset + state.filters.limit - 1);
+
+                if (state.filters.q && state.filters.q.trim()) {
+                    query = query.ilike('full_name', `%${state.filters.q}%`);
+                }
+                if (state.filters.region && state.filters.region.trim()) {
+                    query = query.ilike('region', `%${state.filters.region}%`);
+                }
+
+                const { data, error, count } = await query;
+                
+                if (error) throw error;
+
+                state.page.total = count || 0;
+
+                return {
+                    items: data || [],
+                    nextCursor: null,
+                    prevCursor: null
+                };
+            } catch (error) {
+                console.error('Fallback API failed:', error);
+                throw error;
+            }
+        }
+
+        // Search talents using primary API with fallback
+        async function searchTalents() {
+            set('out-debug', 'Searching talents...');
+            
+            try {
+                // Try primary API first
+                let result = await searchTalentsPrimary();
+                
+                // If primary fails, use fallback
+                if (!result) {
+                    result = await searchTalentsFallback();
+                }
+
+                set('out-debug', `Found ${result.items.length} talents`);
+                return result;
+            } catch (error) {
+                console.error('Search failed:', error);
+                set('out-debug', `Search error: ${error.message}`);
+                showToast(`Sökning misslyckades: ${error.message}`, true);
+                return { items: [], nextCursor: null, prevCursor: null };
+            }
+        }
+
+        // Render the main interface
+        function renderInterface() {
+            cardContent.innerHTML = `
+                <div class="filters">
+                    <input type="text" id="q" placeholder="Sök namn..." value="${state.filters.q}">
+                    <input type="text" id="region" placeholder="Region..." value="${state.filters.region}">
+                    <input type="number" id="limit" min="1" max="50" value="${state.filters.limit}">
+                    <button id="btn-search">Sök</button>
+                    <button id="btn-prev" disabled>Föregående</button>
+                    <button id="btn-next" disabled>Nästa</button>
+                </div>
+
+                <div class="dialog" id="request-dialog">
+                    <h3>Skicka förfrågan till: <span id="dlg-target-name">–</span></h3>
+                    <input type="hidden" id="dlg-target-id">
+                    <div class="dialog-fields">
+                        <input type="datetime-local" id="dlg-start" required>
+                        <input type="datetime-local" id="dlg-end" required>
+                        <input type="text" id="dlg-location" placeholder="Plats..." required>
+                        <select id="dlg-role" required>
+                            <option value="">Välj roll...</option>
+                            <option value="referee">Referee</option>
+                            <option value="coach">Coach</option>
+                        </select>
+                        <textarea id="dlg-message" placeholder="Meddelande..."></textarea>
+                    </div>
+                    <div class="dialog-buttons">
+                        <button type="button" id="dlg-cancel">Avbryt</button>
+                        <button type="submit" id="dlg-send">Skicka</button>
+                    </div>
+                </div>
+
+                <div id="list"></div>
+            `;
+
+            // Attach event listeners
+            document.getElementById('btn-search').onclick = () => {
+                state.filters.q = document.getElementById('q').value;
+                state.filters.region = document.getElementById('region').value;
+                state.filters.limit = parseInt(document.getElementById('limit').value) || 10;
+                state.page.offset = 0;
+                state.page.cursorNext = null;
+                state.page.cursorPrev = null;
+                saveFilters();
+                loadTalents();
+            };
+
+            document.getElementById('btn-prev').onclick = () => {
+                if (state.page.cursorPrev !== null) {
+                    state.page.offset = parseInt(state.page.cursorPrev);
+                } else {
+                    state.page.offset = Math.max(0, state.page.offset - state.filters.limit);
+                }
+                state.page.cursorNext = null;
+                state.page.cursorPrev = null;
+                loadTalents();
+            };
+
+            document.getElementById('btn-next').onclick = () => {
+                if (state.page.cursorNext !== null) {
+                    state.page.offset = parseInt(state.page.cursorNext);
+                } else {
+                    state.page.offset += state.filters.limit;
+                }
+                state.page.cursorNext = null;
+                state.page.cursorPrev = null;
+                loadTalents();
+            };
+
+            document.getElementById('dlg-cancel').onclick = closeDialog;
+            document.getElementById('dlg-send').onclick = sendRequest;
+        }
+
+        // Load and display talents
+        async function loadTalents() {
+            const result = await searchTalents();
+            const listEl = document.getElementById('list');
+            
+            if (!result.items || result.items.length === 0) {
+                listEl.innerHTML = '<p style="text-align: center; color: var(--subtle); padding: var(--xl);">Inga talanger hittades</p>';
+                document.getElementById('btn-prev').disabled = true;
+                document.getElementById('btn-next').disabled = true;
+                return;
+            }
+
+            // Update pagination buttons
+            document.getElementById('btn-prev').disabled = !state.page.cursorPrev && state.page.offset === 0;
+            document.getElementById('btn-next').disabled = !state.page.cursorNext && 
+                (state.page.total > 0 && state.page.offset + state.filters.limit >= state.page.total);
+
+            // Render talent cards
+            listEl.innerHTML = result.items.map(talent => `
+                <div class="talent-card">
+                    <div class="talent-info">
+                        <h4>${talent.full_name}</h4>
+                        <p>${talent.region} • ${fmtRoles(talent)}</p>
+                    </div>
+                    <div class="talent-actions">
+                        <button 
+                            onclick="openRequestDialog('${talent.id}', '${talent.full_name}')"
+                            ${state.requestedTalents.has(talent.id) ? 'disabled' : ''}
+                        >
+                            ${state.requestedTalents.has(talent.id) ? 'Skickad' : 'Request'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Request dialog functions
+        function openRequestDialog(talentId, talentName) {
+            document.getElementById('dlg-target-id').value = talentId;
+            document.getElementById('dlg-target-name').textContent = talentName;
+            show('request-dialog');
+        }
+
+        function closeDialog() {
+            hide('request-dialog');
+            // Clear form
+            document.getElementById('dlg-start').value = '';
+            document.getElementById('dlg-end').value = '';
+            document.getElementById('dlg-location').value = '';
+            document.getElementById('dlg-role').value = '';
+            document.getElementById('dlg-message').value = '';
+        }
+
+        async function sendRequest() {
+            const talentId = document.getElementById('dlg-target-id').value;
+            const start = document.getElementById('dlg-start').value;
+            const end = document.getElementById('dlg-end').value;
+            const location = document.getElementById('dlg-location').value;
+            const role = document.getElementById('dlg-role').value;
+            const message = document.getElementById('dlg-message').value;
+
+            // Validation
+            if (!start || !end || !location || !role) {
+                showToast('Alla fält måste fyllas i', true);
+                return;
+            }
+
+            if (new Date(start) >= new Date(end)) {
+                showToast('Sluttid måste vara efter starttid', true);
+                return;
+            }
+
+            if (!['referee', 'coach'].includes(role)) {
+                showToast('Ogiltig roll', true);
+                return;
+            }
+
+            try {
+                const { data, error } = await supa.client
+                    .from('bookings')
+                    .insert([{
+                        manager_id: (await supa.Auth.getSession()).data.user.id,
+                        talent_id: talentId,
+                        role_at_booking: role,
+                        start_ts: new Date(start).toISOString(),
+                        end_ts: new Date(end).toISOString(),
+                        location,
+                        message,
+                        status: 'requested'
+                    }])
+                    .select()
+                    .single();
+
+                if (error) throw error;
+
+                showToast('Förfrågan skickad.');
+                closeDialog();
+                
+                // Mark talent as requested
+                state.requestedTalents.add(talentId);
+                
+                // Reload the list to update button states
+                loadTalents();
+            } catch (error) {
+                console.error('Request failed:', error);
+                showToast(`Förfrågan misslyckades: ${error.message}`, true);
+            }
+        }
+
+        // Initialize the application
+        async function init() {
+            loadFilters();
+            
+            const isAuthenticated = await checkAuth();
+            if (!isAuthenticated) return;
+
+            renderInterface();
+            await loadTalents();
+        }
+
+        // Start the application
+        init();
+    </script>
+</body>
+</html>

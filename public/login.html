@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <title>LinkGo – Login Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Design tokens (colors, spacing, radii, etc.) -->
+  <link rel="stylesheet" href="./tokens.css" />
+
+  <style>
+    :root {
+      /* Fallbacks if någon token saknas i tokens.css */
+      --surface: var(--bg, #0b0b0c);
+      --text: var(--fg, #e7e7ea);
+      --muted: var(--muted-600, #1a1b1e);
+      --primary: var(--accent, #3b82f6);
+      --m: var(--space-4, 12px);
+      --l: var(--space-6, 16px);
+      --xl: var(--space-8, 24px);
+      --radius: var(--radius-lg, 16px);
+      --shadow: 0 8px 24px rgba(0,0,0,0.25);
+      --border: 1px solid color-mix(in oklab, var(--muted), #ffffff 6%);
+    }
+
+    html, body {
+      height: 100%;
+      background: color-mix(in oklab, var(--surface), #000 6%);
+      color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .wrap {
+      min-height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 32px 16px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 420px;
+      margin: 60px auto;
+      padding: 24px;
+      border-radius: var(--radius);
+      background: var(--surface);
+      border: var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .title {
+      margin: 0 0 var(--xl);
+      font-weight: 650;
+      font-size: 22px;
+      letter-spacing: -0.01em;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      margin-bottom: var(--m);
+    }
+
+    label {
+      font-size: 12px;
+      color: color-mix(in oklab, var(--text), #ffffff 60%);
+    }
+
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: color-mix(in oklab, var(--surface), #ffffff 4%);
+      border: 1px solid color-mix(in oklab, var(--muted), #ffffff 8%);
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+    }
+
+    input::placeholder { color: color-mix(in oklab, var(--text), #ffffff 70%); }
+
+    input:focus {
+      border-color: color-mix(in oklab, var(--primary), #ffffff 10%);
+      box-shadow: 0 0 0 6px color-mix(in oklab, var(--primary), transparent 85%);
+      background: color-mix(in oklab, var(--surface), #ffffff 6%);
+    }
+
+    .row {
+      display: flex;
+      gap: var(--m);
+      flex-wrap: wrap;
+      margin: var(--l) 0 var(--xl);
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid color-mix(in oklab, var(--muted), #ffffff 8%);
+      background: color-mix(in oklab, var(--surface), #ffffff 4%);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s ease, border-color .15s ease, transform .02s ease;
+    }
+
+    button:hover,
+    button:focus-visible {
+      border-color: color-mix(in oklab, var(--primary), #ffffff 10%);
+      background: color-mix(in oklab, var(--primary), transparent 85%);
+      outline: none;
+    }
+
+    button:active { transform: translateY(1px); }
+
+    .outputs {
+      display: grid;
+      gap: var(--m);
+    }
+
+    .out {
+      background: color-mix(in oklab, var(--muted), #000 0%);
+      color: color-mix(in oklab, var(--text), #ffffff 10%);
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid color-mix(in oklab, var(--muted), #ffffff 6%);
+      overflow: auto;
+      max-height: 240px;
+      line-height: 1.35;
+      font-size: 12px;
+    }
+
+    .hint {
+      margin-top: 6px;
+      font-size: 12px;
+      color: color-mix(in oklab, var(--text), #ffffff 60%);
+    }
+  </style>
+
+  <!-- Konfiguration (sätter window.CONFIG), måste laddas innan supa.js används -->
+  <script src="./config.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <main class="card" role="main" aria-labelledby="title">
+      <h1 id="title" class="title">LinkGo – Login Demo</h1>
+
+      <div class="field">
+        <label for="email">E-post</label>
+        <input id="email" type="email" placeholder="namn@exempel.se" autocomplete="email" />
+      </div>
+
+      <div class="field">
+        <label for="password">Lösenord</label>
+        <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+
+      <div class="row">
+        <button id="btn-login" type="button">Login</button>
+        <button id="btn-logout" type="button">Logout</button>
+        <button id="btn-whoami" type="button">Who am I?</button>
+        <button id="btn-catalog" type="button">List talents</button>
+      </div>
+
+      <section class="outputs" aria-live="polite">
+        <div>
+          <label for="out-auth">Auth / Session</label>
+          <pre id="out-auth" class="out" tabindex="0">{ "status": "init" }</pre>
+        </div>
+
+        <div>
+          <label for="out-profile">Min profil</label>
+          <pre id="out-profile" class="out" tabindex="0">—</pre>
+        </div>
+
+        <div>
+          <label for="out-catalog">Katalog (talents)</label>
+          <pre id="out-catalog" class="out" tabindex="0">—</pre>
+        </div>
+      </section>
+
+      <p class="hint">Tips: öppna DevTools → Console för debug-loggar.</p>
+    </main>
+  </div>
+
+  <!-- Funktionsscript (ESM) -->
+  <script type="module">
+    import supa from '../js/supa.js';
+
+    console.log('[login] wired', { CONFIG: window.CONFIG, supa });
+
+    const $ = (id) => document.getElementById(id);
+    const set = (id, obj) => {
+      const el = $(id);
+      if (!el) return;
+      try {
+        el.textContent = (typeof obj === 'string')
+          ? obj
+          : JSON.stringify(obj, null, 2);
+      } catch (e) {
+        el.textContent = String(obj);
+      }
+    };
+
+    // Init: hämta session vid sidladdning
+    async function refreshSession() {
+      try {
+        const session = await supa.Auth.getSession();
+        set('out-auth', session ?? { session: null });
+      } catch (err) {
+        console.error('getSession error', err);
+        set('out-auth', { error: String(err?.message || err) });
+      }
+    }
+
+    // Button handlers
+    async function onLogin() {
+      const email = $('email').value.trim();
+      const password = $('password').value;
+      if (!email || !password) {
+        set('out-auth', { error: 'Fyll i email och lösenord' });
+        return;
+      }
+      try {
+        const res = await supa.Auth.signInWithPassword({ email, password });
+        set('out-auth', res);
+        // hämta session igen för tydlighet
+        await refreshSession();
+      } catch (err) {
+        console.error('login error', err);
+        set('out-auth', { error: String(err?.message || err) });
+      }
+    }
+
+    async function onLogout() {
+      try {
+        const res = await supa.Auth.signOut();
+        set('out-auth', res);
+        await refreshSession();
+      } catch (err) {
+        console.error('logout error', err);
+        set('out-auth', { error: String(err?.message || err) });
+      }
+    }
+
+    async function onWhoAmI() {
+      try {
+        const me = await supa.Profiles.getMyProfile();
+        set('out-profile', me ?? { profile: null });
+      } catch (err) {
+        console.error('whoami error', err);
+        set('out-profile', { error: String(err?.message || err) });
+      }
+    }
+
+    async function onListTalents() {
+      try {
+        const list = await supa.Catalog.list({ limit: 5 });
+        set('out-catalog', list ?? []);
+      } catch (err) {
+        console.error('catalog error', err);
+        set('out-catalog', { error: String(err?.message || err) });
+      }
+    }
+
+    // Wire up onclick listeners
+    $('btn-login')?.addEventListener('click', onLogin);
+    $('btn-logout')?.addEventListener('click', onLogout);
+    $('btn-whoami')?.addEventListener('click', onWhoAmI);
+    $('btn-catalog')?.addEventListener('click', onListTalents);
+
+    // Kick off
+    await refreshSession();
+  </script>
+</body>
+</html>

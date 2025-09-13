@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <title>LinkGo – Flow Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+<body>
+<script type="module">
+/*
+// Kör med URL-parametrar (exempel):
+//  – Auto-slot (retry tills ledig):
+//    flow_test.html?mgr=manager.beta@example.com&mp=PASS&tal=ref2@example.com&tp=PASS
+//  – Manuell tid (lokal → UTC ISO i scriptet):
+//    …&start=2025-11-20T18:00&end=2025-11-20T19:30
+//  – Välj talent:
+//    tid=<profiles.id>  (prio 1 – exakt profiles.id som Bookings använder)
+//    thint=<namn-del>   (prio 2 – ilike på full_name/name)
+// OBS: Bookings.request() förväntar profiles.id → vi använder profile_id (fallback id).
+*/
+
+import './config.js';
+import supa from '../js/supa.js';
+
+// ---------- Helpers ----------
+function ensureConfig() {
+  if (!('CONFIG' in window) || !window.CONFIG || !window.CONFIG.SUPABASE_URL) {
+    const msg = 'window.CONFIG saknas eller ofullständig – säkerställ att ./config.js laddas och innehåller SUPABASE_URL.';
+    console.error('❌ Init: CONFIG', msg);
+    throw new Error(msg);
+  }
+}
+function toIsoZ(d) { return new Date(d).toISOString().replace(/\.\d{3}Z$/, 'Z'); }
+function nextDayLocalAt(h, m) {
+  const now = new Date();
+  const d = new Date(now);
+  d.setDate(now.getDate() + 1);
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+async function ok(promise, stepLabel) {
+  const { data, error } = await promise;
+  if (error) {
+    const errObj = { code: error.code ?? null, message: error.message ?? String(error) };
+    console.error('❌', stepLabel, errObj);
+    throw new Error(`${stepLabel} failed: ${errObj.code ?? ''} ${errObj.message}`);
+  }
+  console.log('✅', stepLabel);
+  return data;
+}
+
+// ---------- URL & creds ----------
+const qs = new URLSearchParams(location.search);
+function readParamsAndCreds() {
+  let MGR_EMAIL = qs.get('mgr') || '';
+  let MGR_PASS  = qs.get('mp')  || '';
+  let TAL_EMAIL = qs.get('tal') || '';
+  let TAL_PASS  = qs.get('tp')  || '';
+
+  const TID   = qs.get('tid')   || ''; // profiles.id
+  const THINT = qs.get('thint') || '';
+
+  if (!MGR_EMAIL) MGR_EMAIL = prompt('Manager email') || '';
+  if (!MGR_PASS)  MGR_PASS  = prompt('Manager password') || '';
+  if (!TAL_EMAIL) TAL_EMAIL = prompt('Talent email') || '';
+  if (!TAL_PASS)  TAL_PASS  = prompt('Talent password') || '';
+
+  if (!MGR_EMAIL || !MGR_PASS || !TAL_EMAIL || !TAL_PASS) {
+    const msg = 'Kräver mgr/mp/tal/tp. Avbrutet.';
+    console.error('❌ Credentials', msg);
+    throw new Error(msg);
+  }
+  return { MGR_EMAIL, MGR_PASS, TAL_EMAIL, TAL_PASS, TID, THINT };
+}
+
+// ---------- Catalog utils ----------
+function getTalentProfileId(row) {
+  return row?.profile_id ?? row?.id ?? row?.user_id ?? null;
+}
+async function listCatalog(limit = 50) {
+  const catalog = await ok(supa.Catalog.list({ limit }), 'A4 Catalog.list({limit:50})');
+  if (!Array.isArray(catalog) || catalog.length === 0) {
+    throw new Error('A4: Inga talents i katalogen – kan inte fortsätta.');
+  }
+  console.table(catalog.map(x => ({
+    name: x.full_name ?? x.name ?? '(okänd)',
+    region: x.region ?? '',
+    profile_id: x.profile_id ?? null,
+    id: x.id ?? null
+  })));
+  return catalog;
+}
+
+// När varken tid eller thint finns: lås valet till TAL_EMAIL (hämtar profiles.id via temp login)
+async function resolveTalentProfileId({ MGR_EMAIL, MGR_PASS, TAL_EMAIL, TAL_PASS, TID, THINT }) {
+  // 1) Om tid-param finns → använd den direkt
+  if (TID) return TID;
+
+  // 2) Om thint finns → försök hitta i katalogen
+  if (THINT) {
+    const catalog = await listCatalog(50);
+    const q = THINT.toLowerCase();
+    const row = catalog.find(x => ((x.full_name ?? x.name ?? '').toLowerCase()).includes(q));
+    if (!row) throw new Error(`A5: Hittade ingen talent på thint="${THINT}".`);
+    console.log('A5 Selected talent:', {
+      id: row.id ?? null,
+      profile_id: getTalentProfileId(row),
+      full_name: row.full_name ?? row.name ?? ''
+    });
+    const pid = getTalentProfileId(row);
+    if (!pid) throw new Error('A5: selected talent saknar profile_id/id.');
+    return pid;
+  }
+
+  // 3) Annars: hämta profiles.id för TAL_EMAIL via temporär login
+  const mgrReLogin = { email: MGR_EMAIL, password: MGR_PASS };
+  await ok(supa.Auth.signInWithPassword({ email: TAL_EMAIL, password: TAL_PASS }), 'A4.1 Temp talent login');
+  const talProfile = await ok(supa.Profiles.getMyProfile(), 'A4.2 Talent Profiles.getMyProfile()');
+  const tal_profile_id = talProfile?.id;
+  await ok(supa.Auth.signOut(), 'A4.3 Temp talent logout');
+  await ok(supa.Auth.signInWithPassword(mgrReLogin), 'A4.4 Restore manager session');
+
+  if (!tal_profile_id) throw new Error('A5: Kunde inte hämta talentens profiles.id.');
+  // Visa katalogen och markera om vi hittar samma profil (diagnostik)
+  const catalog = await listCatalog(50);
+  const match = catalog.find(x => String(getTalentProfileId(x)) === String(tal_profile_id));
+  if (match) {
+    console.log('A5 Selected talent:', {
+      id: match.id ?? null,
+      profile_id: getTalentProfileId(match),
+      full_name: match.full_name ?? match.name ?? ''
+    });
+  } else {
+    console.warn('A5: Talentens profile_id finns ej i kataloglistan – fortsätter ändå med profiles.id direkt.');
+  }
+  return tal_profile_id;
+}
+
+// ---------- Slots & retry (B-steget) ----------
+const urlStart = qs.get('start'); // 'YYYY-MM-DDTHH:mm' lokal
+const urlEnd   = qs.get('end');
+function toUtcIso(localStr) { return new Date(localStr).toISOString(); }
+function makeCandidates() {
+  const arr = [];
+  const base = new Date();
+  base.setDate(base.getDate() + 7);
+  base.setHours(18, 0, 0, 0); // 18:00 lokal
+  for (let i = 0; i < 30; i++) {
+    const s = new Date(base.getTime() + i * 24 * 3600 * 1000);
+    const e = new Date(s.getTime() + 90 * 60000); // 1h30
+    arr.push({ start_ts: s.toISOString(), end_ts: e.toISOString() });
+  }
+  return arr;
+}
+async function tryRequestUntilFree({ talent_id, role_at_booking, location, message }) {
+  // 1) Manuell tid via URL → försök exakt 1 gång
+  if (urlStart && urlEnd) {
+    const start_ts = toUtcIso(urlStart);
+    const end_ts   = toUtcIso(urlEnd);
+    const { data, error } = await supa.Bookings.request({ talent_id, role_at_booking, start_ts, end_ts, location, message });
+    if (error) throw new Error(`manual slot failed: ${error.message}`);
+    console.log('B2 booked', { booking_id: data?.id ?? data?.booking_id, start_ts, end_ts });
+    return { booking_id: data?.id ?? data?.booking_id, start_ts, end_ts };
+  }
+
+  // 2) Auto-kandidater med retry på tidskrock
+  const cands = makeCandidates();
+  console.info('B1 trying candidates…', cands.length);
+
+  for (const cand of cands) {
+    const { data, error } = await supa.Bookings.request({
+      talent_id, role_at_booking, start_ts: cand.start_ts, end_ts: cand.end_ts, location, message
+    });
+
+    if (!error) {
+      const booking_id = data?.id ?? data?.booking_id;
+      console.log('B2 booked', { booking_id, start_ts: cand.start_ts, end_ts: cand.end_ts });
+      return { booking_id, start_ts: cand.start_ts, end_ts: cand.end_ts };
+    }
+
+    const code = error.code;
+    const msg  = (error.message ?? '').toLowerCase();
+    if (code === '23P01' || msg.includes('time conflict') || msg.includes('overlap')) {
+      console.warn('B1 conflict', { code, message: error.message, start_ts: cand.start_ts, end_ts: cand.end_ts });
+      continue;
+    }
+    throw new Error(`request failed: ${error.message}`);
+  }
+  throw new Error('no free slot found in candidate window');
+}
+
+(async () => {
+  console.group('FLOW TEST');
+
+  try {
+    ensureConfig();
+    const { MGR_EMAIL, MGR_PASS, TAL_EMAIL, TAL_PASS, TID, THINT } = readParamsAndCreds();
+
+    console.info('[FLOW] project:', window.CONFIG.SUPABASE_URL);
+    console.info('[FLOW] manager:', MGR_EMAIL, 'talent:', TAL_EMAIL, 'tid:', TID || '-', 'thint:', THINT || '-');
+
+    // A. Manager login → session → profil
+    await ok(supa.Auth.signInWithPassword({ email: MGR_EMAIL, password: MGR_PASS }), 'A1 Manager login');
+    await ok(supa.Auth.getSession(), 'A2 getSession()');
+    await ok(supa.Profiles.getMyProfile(), 'A3 Profiles.getMyProfile()');
+
+    // A5. Bestäm korrekt profiles.id för talent (prio: tid → thint → TAL_EMAIL via temp login)
+    const talentProfileId = await resolveTalentProfileId({ MGR_EMAIL, MGR_PASS, TAL_EMAIL, TAL_PASS, TID, THINT });
+
+    // B. Bookings.request med retry/auto-slot eller manuell URL-slot
+    const LOCATION = 'Skytteholms IP';
+    const MESSAGE  = 'Träningsmatch U13';
+    const ROLE_AT  = 'referee';
+
+    const booked = await tryRequestUntilFree({
+      talent_id: talentProfileId,
+      role_at_booking: ROLE_AT,
+      location: LOCATION,
+      message: MESSAGE
+    });
+
+    console.log('B2 booking_id', { id: booked.booking_id, start: booked.start_ts, end: booked.end_ts });
+    const booking_id = booked.booking_id;
+
+    // B-VERIFY (fortfarande manager): hämta booking och verifiera att talent är rätt
+    const bookingRow = await ok(supa.Bookings.get({ booking_id }), 'B3 Bookings.get()');
+    const bookedTalentId = bookingRow?.talent_id;
+    console.log('B3 talent_id on booking:', bookedTalentId, '(expected profile_id:', talentProfileId, ')');
+
+    // Temporär talent-login för att läsa faktisk profiles.id (ytterligare kontroll)
+    const mgrReLogin = { email: MGR_EMAIL, password: MGR_PASS };
+    await ok(supa.Auth.signInWithPassword({ email: TAL_EMAIL, password: TAL_PASS }), 'B4 Temp talent login');
+    const talProfile = await ok(supa.Profiles.getMyProfile(), 'B5 Talent Profiles.getMyProfile()');
+    const tal_profile_id = talProfile?.id;
+    await ok(supa.Auth.signOut(), 'B6 Temp talent logout');
+
+    // Återställ manager-session
+    await ok(supa.Auth.signInWithPassword(mgrReLogin), 'B7 Restore manager session');
+
+    // Jämför booking.talent_id med TAL_EMAILs profiles.id
+    if (String(bookedTalentId) !== String(tal_profile_id)) {
+      const message = `Talent mismatch: booking.talent_id ${bookedTalentId} != expected ${tal_profile_id}. ` +
+                      `Tips: ange &tid=${tal_profile_id} eller &thint=<namn> om du vill styra annan profil.`;
+      console.error('❌', message);
+      throw new Error(message);
+    }
+    console.log('✅', 'B8 Talent match verified');
+
+    // C. Manager logout
+    await ok(supa.Auth.signOut(), 'C1 Manager logout');
+
+    // D. Talent login + diagnostik
+    await ok(supa.Auth.signInWithPassword({ email: TAL_EMAIL, password: TAL_PASS }), 'D1 Talent login');
+
+    {
+      const { data, error } = await supa.Bookings.get({ booking_id });
+      if (error) {
+        const errObj = { code: error.code ?? null, message: error.message ?? String(error) };
+        const msg = 'Booking not visible to this talent (RLS) → fel talent';
+        console.error('❌', msg, errObj);
+        throw new Error(msg);
+      }
+      console.log('✅', 'D1.5 Talent can read booking');
+    }
+
+    await ok(supa.Auth.getSession(), 'D2 getSession()');
+
+    const listTalent = await ok(
+      supa.Bookings.listMine({ role: 'talent', status: 'requested', limit: 20 }),
+      'D3 Bookings.listMine({role:"talent", status:"requested", limit:20})'
+    );
+    if (Array.isArray(listTalent)) {
+      console.table(listTalent.map(r => ({ id: r.id, status: r.status, start_ts: r.start_ts })));
+    }
+    const target = Array.isArray(listTalent)
+      ? listTalent.find(r => String(r.id) === String(booking_id))
+      : null;
+    if (!target) {
+      const msg = 'D4: Hittade inte vår booking i talent-listan.';
+      console.error('❌', msg);
+      throw new Error(msg);
+    }
+    console.log('✅', 'D4 Hittade booking i talent-listan', { id: target.id });
+
+    // E. Talent respond accept
+    await ok(supa.Bookings.respond({ booking_id, action: 'accept' }), 'E1 Bookings.respond({action:"accept"})');
+
+    // F. Verify accepted
+    const got = await ok(supa.Bookings.get({ booking_id }), 'F1 Bookings.get()');
+    const status = got?.status;
+    if (status !== 'accepted') {
+      const msg = `F2: Förväntade status 'accepted' men fick '${status}'.`;
+      console.error('❌', 'F2 Verify status', { status });
+      throw new Error(msg);
+    }
+    console.log('✅', 'F2 Status verifierad = accepted', { booking_id, status });
+
+    console.log('🎉 ALL PASS');
+  } catch (err) {
+    console.error('🛑 FLOW FAILED', err?.message ?? err);
+  } finally {
+    console.groupEnd();
+  }
+})();
+</script>
+</body>
+</html>

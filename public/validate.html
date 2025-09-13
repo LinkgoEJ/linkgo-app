@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LinkGo – Validator</title>
+  <link rel="stylesheet" href="./tokens.css" />
+  <style>
+    .wrap{max-width:840px;margin:40px auto;padding:24px;border:1px solid var(--muted);border-radius:16px;background:var(--surface)}
+    .row{display:flex;gap:16px;flex-wrap:wrap}
+    .card{flex:1 1 360px;border:1px solid var(--muted);border-radius:14px;padding:16px}
+    button{cursor:pointer}
+    .badge{font-size:12px;opacity:.8}
+    pre{white-space:pre-wrap;background:#0f1115;border:1px solid #23262d;border-radius:10px;padding:12px;max-height:260px;overflow:auto}
+  </style>
+  <script src="./config.js"></script>
+  <script type="module" src="./validate.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <h1>LinkGo – Validator <span id="env" class="badge"></span></h1>
+    <div class="row">
+      <div class="card">
+        <h3>Catalog test</h3>
+        <p>Kör SELECT på <code>v_talent_catalog</code> och skriv ut 3 första.</p>
+        <button id="btn-catalog">Run catalog test</button>
+        <pre id="out-catalog">–</pre>
+      </div>
+      <div class="card">
+        <h3>RLS test (ska blockera)</h3>
+        <p>Försök läsa <code>profiles</code> direkt. Förväntat: fel (RLS).</p>
+        <button id="btn-rls">Run RLS test</button>
+        <pre id="out-rls">–</pre>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
