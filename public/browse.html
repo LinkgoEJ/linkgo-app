@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LinkGo – Katalog</title>
-    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="./tokens.css">
     <script src="./config.js"></script>
     <style>
         body {
@@ -204,9 +204,9 @@
             const el = document.getElementById(id);
             if (el) {
                 if (typeof val === 'object') {
-                    el.value = JSON.stringify(val);
+                    el.textContent = JSON.stringify(val, null, 2);
                 } else {
-                    el.value = val;
+                    el.textContent = val;
                 }
             }
         }
@@ -312,25 +312,21 @@
         // Primary API: supa.Catalog.list with cursor pagination
         async function searchTalentsPrimary() {
             try {
-                // Simulate the expected API format with cursor pagination
                 const { data, error } = await supa.Catalog.list({
                     q: state.filters.q || null,
                     region: state.filters.region || null,
                     limit: state.filters.limit,
-                    offset: state.page.offset
+                    cursor: state.page.cursorNext
                 });
 
                 if (error) {
                     throw error;
                 }
 
-                // Transform to expected format
                 return {
-                    items: data || [],
-                    nextCursor: data && data.length === state.filters.limit ? 
-                        (state.page.offset + state.filters.limit).toString() : null,
-                    prevCursor: state.page.offset > 0 ? 
-                        Math.max(0, state.page.offset - state.filters.limit).toString() : null
+                    items: data?.items || [],
+                    nextCursor: data?.nextCursor || null,
+                    prevCursor: data?.prevCursor || null
                 };
             } catch (error) {
                 console.warn('Primary API failed, trying fallback:', error);
@@ -443,23 +439,21 @@
 
             document.getElementById('btn-prev').onclick = () => {
                 if (state.page.cursorPrev !== null) {
-                    state.page.offset = parseInt(state.page.cursorPrev);
+                    state.page.cursorNext = state.page.cursorPrev;
                 } else {
                     state.page.offset = Math.max(0, state.page.offset - state.filters.limit);
                 }
-                state.page.cursorNext = null;
                 state.page.cursorPrev = null;
                 loadTalents();
             };
 
             document.getElementById('btn-next').onclick = () => {
                 if (state.page.cursorNext !== null) {
-                    state.page.offset = parseInt(state.page.cursorNext);
+                    // Keep current cursor for next page
                 } else {
                     state.page.offset += state.filters.limit;
                 }
-                state.page.cursorNext = null;
-                state.page.cursorPrev = null;
+                state.page.cursorPrev = state.page.cursorNext;
                 loadTalents();
             };
 
@@ -562,7 +556,7 @@
 
                 if (error) throw error;
 
-                showToast('Förfrågan skickad.');
+                showToast('Förfrågan skickad');
                 closeDialog();
                 
                 // Mark talent as requested

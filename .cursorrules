@@ -1,0 +1,8 @@
+# Cursor Rules – LinkGo (hård och minimal)
+- Do not modify Supabase migrations, RLS policies or any SQL unless I explicitly ask.
+- Do not touch /js/supa.js, /public/config.js, /public/tokens.css unless I explicitly ask.
+- Only create/modify: /public/*.html pages with a single inline <script type="module">.
+- Keep imports exactly as specified (import supa from '../js/supa.js';).
+- No UI frameworks; plain HTML + tokens only.
+- Keep changes minimal and localized. No refactors outside the target file.
+- Always show a diff before finalizing changes.

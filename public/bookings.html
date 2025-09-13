@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LinkGo – Mina förfrågningar</title>
-    <link rel="stylesheet" href="../css/tokens.css">
+    <link rel="stylesheet" href="./tokens.css">
     <script src="./config.js"></script>
     <style>
         body {
@@ -178,7 +178,7 @@
         }
 
         // Format datetime range in local time
-        function fmtDateTimeRange(startTs, endTs) {
+        function fmtRangeLocal(startTs, endTs) {
             try {
                 const start = new Date(startTs);
                 const end = new Date(endTs);
@@ -278,7 +278,7 @@
             }
         }
 
-        // Load upcoming bookings (status = 'accepted' or 'confirmed', future start_at)
+        // Load upcoming bookings (status = 'accepted' or 'confirmed', future start_ts)
         async function loadUpcomingBookings(talentId) {
             try {
                 const now = new Date().toISOString();
@@ -301,30 +301,29 @@
             }
         }
 
+        // Get manager name (best-effort lookup)
+        async function getManagerName(managerId) {
+            try {
+                const { data, error } = await supa.client
+                    .from('profiles')
+                    .select('full_name')
+                    .eq('id', managerId)
+                    .single();
+                
+                if (error || !data) return managerId;
+                return data.full_name || managerId;
+            } catch (error) {
+                return managerId;
+            }
+        }
+
         // Respond to booking (accept/decline)
         async function respondToBooking(bookingId, action, talentId) {
             try {
-                // Extra client-side security: verify talent_id matches
-                const { data: booking, error: fetchError } = await supa.client
-                    .from('bookings')
-                    .select('talent_id, status')
-                    .eq('id', bookingId)
-                    .single();
-
-                if (fetchError) throw fetchError;
-                if (!booking || booking.talent_id !== talentId) {
-                    throw new Error('Du har inte behörighet att svara på denna bokning');
-                }
-                if (booking.status !== 'requested') {
-                    throw new Error('Bokningen är redan besvarad');
-                }
-
-                // Update booking status
                 const { data, error } = await supa.client
                     .from('bookings')
                     .update({ 
-                        status: action === 'accept' ? 'accepted' : 'declined',
-                        responded_at: new Date().toISOString()
+                        status: action === 'accept' ? 'accepted' : 'declined'
                     })
                     .eq('id', bookingId)
                     .eq('talent_id', talentId)
@@ -340,7 +339,7 @@
         }
 
         // Render incoming requests section
-        function renderIncomingRequests(requests) {
+        async function renderIncomingRequests(requests) {
             if (requests.length === 0) {
                 return `
                     <div class="section">
@@ -350,32 +349,35 @@
                 `;
             }
 
-            const requestsHtml = requests.map(booking => `
-                <div class="booking-card" data-booking-id="${booking.id}">
-                    <div class="booking-info">
-                        <h4>Från: ${booking.manager_id}</h4>
-                        <p class="time">${fmtDateTimeRange(booking.start_ts, booking.end_ts)}</p>
-                        <p>Roll: ${booking.role_at_booking}</p>
-                        ${booking.location ? `<p>Plats: ${booking.location}</p>` : ''}
-                        ${booking.message ? `<p>Meddelande: ${booking.message}</p>` : ''}
+            const requestsHtml = await Promise.all(requests.map(async (booking) => {
+                const managerName = await getManagerName(booking.manager_id);
+                return `
+                    <div class="booking-card" data-booking-id="${booking.id}">
+                        <div class="booking-info">
+                            <h4>Från: ${managerName}</h4>
+                            <p class="time">${fmtRangeLocal(booking.start_ts, booking.end_ts)}</p>
+                            <p>Roll: ${booking.role_at_booking}</p>
+                            ${booking.location ? `<p>Plats: ${booking.location}</p>` : ''}
+                            ${booking.message ? `<p>Meddelande: ${booking.message}</p>` : ''}
+                        </div>
+                        <div class="booking-actions">
+                            <button class="accept" onclick="handleAccept('${booking.id}')">Acceptera</button>
+                            <button class="decline" onclick="handleDecline('${booking.id}')">Avvisa</button>
+                        </div>
                     </div>
-                    <div class="booking-actions">
-                        <button class="accept" onclick="handleAccept('${booking.id}')">Acceptera</button>
-                        <button class="decline" onclick="handleDecline('${booking.id}')">Avvisa</button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }));
 
             return `
                 <div class="section">
                     <h2>Inkommande (requested)</h2>
-                    ${requestsHtml}
+                    ${requestsHtml.join('')}
                 </div>
             `;
         }
 
         // Render upcoming bookings section
-        function renderUpcomingBookings(bookings) {
+        async function renderUpcomingBookings(bookings) {
             if (bookings.length === 0) {
                 return `
                     <div class="section">
@@ -385,22 +387,25 @@
                 `;
             }
 
-            const bookingsHtml = bookings.map(booking => `
-                <div class="booking-card">
-                    <div class="booking-info">
-                        <h4>Från: ${booking.manager_id}</h4>
-                        <p class="time">${fmtDateTimeRange(booking.start_ts, booking.end_ts)}</p>
-                        <p>Roll: ${booking.role_at_booking} • Status: ${booking.status}</p>
-                        ${booking.location ? `<p>Plats: ${booking.location}</p>` : ''}
-                        ${booking.message ? `<p>Meddelande: ${booking.message}</p>` : ''}
+            const bookingsHtml = await Promise.all(bookings.map(async (booking) => {
+                const managerName = await getManagerName(booking.manager_id);
+                return `
+                    <div class="booking-card">
+                        <div class="booking-info">
+                            <h4>Från: ${managerName}</h4>
+                            <p class="time">${fmtRangeLocal(booking.start_ts, booking.end_ts)}</p>
+                            <p>Roll: ${booking.role_at_booking} • Status: ${booking.status}</p>
+                            ${booking.location ? `<p>Plats: ${booking.location}</p>` : ''}
+                            ${booking.message ? `<p>Meddelande: ${booking.message}</p>` : ''}
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }));
 
             return `
                 <div class="section">
                     <h2>Kommande (accepted/confirmed)</h2>
-                    ${bookingsHtml}
+                    ${bookingsHtml.join('')}
                 </div>
             `;
         }
@@ -472,9 +477,12 @@
 
                 set('out-debug', `Loaded ${incomingRequests.length} incoming, ${upcomingBookings.length} upcoming`);
 
-                cardContent.innerHTML = 
-                    renderIncomingRequests(incomingRequests) + 
-                    renderUpcomingBookings(upcomingBookings);
+                const [incomingHtml, upcomingHtml] = await Promise.all([
+                    renderIncomingRequests(incomingRequests),
+                    renderUpcomingBookings(upcomingBookings)
+                ]);
+
+                cardContent.innerHTML = incomingHtml + upcomingHtml;
             } catch (error) {
                 console.error('Failed to load bookings:', error);
                 showToast(`Kunde inte ladda bokningar: ${error.message}`, true);
