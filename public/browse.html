@@ -380,6 +380,10 @@
                     result = await searchTalentsFallback();
                 }
 
+                // Update cursor state for next/prev navigation
+                state.page.cursorNext = result.nextCursor;
+                state.page.cursorPrev = result.prevCursor;
+
                 set('out-debug', `Found ${result.items.length} talents`);
                 return result;
             } catch (error) {
