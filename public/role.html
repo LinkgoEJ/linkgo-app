@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Välj roll - LinkGo</title>
+    <link rel="stylesheet" href="./tokens.css">
+    <link rel="stylesheet" href="./config.js">
+</head>
+<body>
+    <div style="max-width: 600px; margin: 0 auto; padding: var(--xl);">
+        <h1 style="text-align: center; margin-bottom: var(--xxl);">Välj roll</h1>
+        
+        <!-- Login required card -->
+        <div id="login-required" style="display: none; background: var(--surface); border: 1px solid var(--muted); border-radius: 12px; padding: var(--xl); text-align: center;">
+            <p style="margin-bottom: var(--l);">Du måste logga in för att välja roll.</p>
+            <a href="./login.html" style="display: inline-block; background: var(--primary); color: var(--bg); padding: 12px 24px; border-radius: 12px; text-decoration: none;">Logga in</a>
+        </div>
+
+        <!-- Role selection cards -->
+        <div id="role-selection" style="display: none;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--l); margin-bottom: var(--xxl);">
+                <!-- Manager card -->
+                <div style="background: var(--surface); border: 1px solid var(--muted); border-radius: 12px; padding: var(--xl); text-align: center;">
+                    <h3 style="margin-bottom: var(--l);">Manager</h3>
+                    <p style="color: var(--subtle); margin-bottom: var(--l);">Boka talanger för dina evenemang</p>
+                    <button id="select-manager" style="width: 100%; background: var(--primary); color: var(--bg); border: none; padding: 12px; border-radius: 12px; cursor: pointer;">Välj Manager</button>
+                </div>
+
+                <!-- Talent card -->
+                <div style="background: var(--surface); border: 1px solid var(--muted); border-radius: 12px; padding: var(--xl); text-align: center;">
+                    <h3 style="margin-bottom: var(--l);">Talent</h3>
+                    <p style="color: var(--subtle); margin-bottom: var(--l);">Erbjud dina tjänster som domare eller tränare</p>
+                    <button id="select-talent" style="width: 100%; background: var(--primary); color: var(--bg); border: none; padding: 12px; border-radius: 12px; cursor: pointer;">Välj Talent</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success CTA card -->
+        <div id="success-cta" style="display: none; background: var(--surface); border: 1px solid var(--success); border-radius: 12px; padding: var(--xl); text-align: center;">
+            <h3 style="color: var(--success); margin-bottom: var(--l);">Roll vald!</h3>
+            <p style="margin-bottom: var(--l);">Din roll har sparats. Fortsätt med att slutföra din profil.</p>
+            <a href="./profile_setup.html" style="display: inline-block; background: var(--success); color: var(--bg); padding: 12px 24px; border-radius: 12px; text-decoration: none;">Fortsätt till profil</a>
+        </div>
+
+        <!-- Toast container -->
+        <div id="toast" style="position: fixed; top: var(--l); right: var(--l); background: var(--surface); border: 1px solid var(--muted); border-radius: 12px; padding: var(--l); display: none; z-index: 1000; max-width: 300px;"></div>
+    </div>
+
+    <script type="module">
+        import supa from '../js/supa.js';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const debug = urlParams.get('debug') === '1';
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.display = 'block';
+            toast.style.borderColor = type === 'error' ? 'var(--danger)' : type === 'success' ? 'var(--success)' : 'var(--muted)';
+            
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+
+        function debugLog(message, data = null) {
+            if (debug) {
+                console.log(`[DEBUG] ${message}`, data);
+            }
+        }
+
+        async function checkAuth() {
+            try {
+                const { data: session, error } = await supa.Auth.getSession();
+                
+                if (error) {
+                    debugLog('Auth check error:', error);
+                    showLoginRequired();
+                    return false;
+                }
+
+                if (!session || !session.user) {
+                    debugLog('No session found');
+                    showLoginRequired();
+                    return false;
+                }
+
+                debugLog('User authenticated:', session.user.id);
+                showRoleSelection();
+                return true;
+            } catch (err) {
+                debugLog('Auth check exception:', err);
+                showLoginRequired();
+                return false;
+            }
+        }
+
+        function showLoginRequired() {
+            document.getElementById('login-required').style.display = 'block';
+            document.getElementById('role-selection').style.display = 'none';
+            document.getElementById('success-cta').style.display = 'none';
+        }
+
+        function showRoleSelection() {
+            document.getElementById('login-required').style.display = 'none';
+            document.getElementById('role-selection').style.display = 'block';
+            document.getElementById('success-cta').style.display = 'none';
+        }
+
+        function showSuccessCTA() {
+            document.getElementById('login-required').style.display = 'none';
+            document.getElementById('role-selection').style.display = 'none';
+            document.getElementById('success-cta').style.display = 'block';
+        }
+
+        async function selectRole(role) {
+            try {
+                debugLog(`Selecting role: ${role}`);
+                showToast('Sparar roll...', 'info');
+
+                const { data, error } = await supa.Profiles.updateMyRole({ role });
+                
+                if (error) {
+                    debugLog('Role update error:', error);
+                    showToast(`Fel: ${error.message}`, 'error');
+                    return;
+                }
+
+                debugLog('Role updated successfully:', data);
+                showToast('Roll sparad!', 'success');
+                showSuccessCTA();
+            } catch (err) {
+                debugLog('Role selection exception:', err);
+                showToast(`Fel: ${err.message}`, 'error');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('select-manager').addEventListener('click', () => selectRole('manager'));
+        document.getElementById('select-talent').addEventListener('click', () => selectRole('talent'));
+
+        // Initialize
+        checkAuth();
+    </script>
+</body>
+</html>

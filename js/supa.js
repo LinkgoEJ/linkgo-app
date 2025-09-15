@@ -100,6 +100,17 @@ export const Auth = {
   },
 
   /**
+   * Sign up using email/password.
+   * @param {{ email: string, password: string }} params
+   * @returns {Promise<{ data: { user: any, session: any } | null, error: { code: string, message: string } | null }>}
+   * @example
+   * const { data, error } = await Auth.signUp({ email, password });
+   */
+  async signUp({ email, password }) {
+    return wrap(supabase.auth.signUp({ email, password }));
+  },
+
+  /**
    * Sign out current session.
    * @returns {Promise<{ data: { success: true } | null, error: { code: string, message: string } | null }>}
    */
@@ -201,6 +212,30 @@ export const Profiles = {
       supabase
         .from('profiles')
         .upsert(row, { onConflict: 'id' })
+        .select('id, role, full_name, region, bio, created_at')
+        .maybeSingle()
+    );
+  },
+
+  /**
+   * Update the current user's role in `profiles`.
+   * Requires login.
+   * @param {{ role: 'manager' | 'talent' }} payload
+   * @returns {Promise<{ data: { id:string, role:string, full_name:string, region:string, bio:string, created_at:string } | null, error: { code:string, message:string } | null }>}
+   */
+  async updateMyRole({ role }) {
+    const gate = await assertLoggedIn();
+    if (!gate.ok) return { data: null, error: gate.error };
+
+    if (!role || !['manager', 'talent'].includes(role)) {
+      return { data: null, error: { code: 'BAD_REQUEST', message: 'Invalid role. Must be "manager" or "talent".' } };
+    }
+
+    return wrap(
+      supabase
+        .from('profiles')
+        .update({ role })
+        .eq('id', gate.userId)
         .select('id, role, full_name, region, bio, created_at')
         .maybeSingle()
     );

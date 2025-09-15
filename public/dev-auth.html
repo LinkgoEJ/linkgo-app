@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkGo – Dev Auth Switcher</title>
+    <link rel="stylesheet" href="./tokens.css">
+    <script src="./config.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            background: var(--bg);
+            color: var(--text);
+        }
+        
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: var(--l);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: var(--xxl);
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0 0 var(--s) 0;
+            color: var(--text);
+        }
+        
+        .cards-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--xl);
+            margin-bottom: var(--xxl);
+        }
+        
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--muted);
+            border-radius: 16px;
+            padding: var(--xl);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card h2 {
+            margin: 0 0 var(--l) 0;
+            color: var(--primary);
+            font-size: 1.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: var(--l);
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: var(--s);
+            font-weight: 500;
+            color: var(--text);
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: var(--m);
+            border: 1px solid var(--muted);
+            border-radius: 8px;
+            font-size: 1rem;
+            background: var(--bg);
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: var(--s);
+            margin-bottom: var(--l);
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+        
+        .btn {
+            padding: var(--m) var(--l);
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-right: var(--s);
+            margin-bottom: var(--s);
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: var(--bg);
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark, var(--primary));
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: var(--muted);
+            color: var(--text);
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--subtle);
+        }
+        
+        .btn:disabled {
+            background: var(--muted);
+            color: var(--subtle);
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .session-bar {
+            background: var(--surface);
+            border: 1px solid var(--muted);
+            border-radius: 12px;
+            padding: var(--l);
+            margin-bottom: var(--xl);
+            display: none;
+        }
+        
+        .session-bar.show {
+            display: block;
+        }
+        
+        .session-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--m);
+        }
+        
+        .session-details {
+            color: var(--subtle);
+            font-size: 0.9rem;
+        }
+        
+        .session-actions {
+            display: flex;
+            gap: var(--s);
+        }
+        
+        .dev-toggle {
+            position: fixed;
+            top: var(--l);
+            right: var(--l);
+            background: var(--muted);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: var(--subtle);
+            z-index: 1000;
+        }
+        
+        .dev-toggle:hover {
+            background: var(--primary);
+            color: var(--bg);
+        }
+        
+        .dev-panel {
+            background: var(--muted);
+            border-radius: 8px;
+            padding: var(--m);
+            margin-top: var(--l);
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            display: none;
+        }
+        
+        .dev-panel.show {
+            display: block;
+        }
+        
+        .toast {
+            position: fixed;
+            top: var(--l);
+            right: var(--l);
+            background: var(--success);
+            color: var(--bg);
+            padding: var(--m) var(--l);
+            border-radius: 8px;
+            display: none;
+            z-index: 3000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .toast.error {
+            background: var(--danger);
+        }
+        
+        .toast.warning {
+            background: var(--warning, #f59e0b);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .cards-grid {
+                grid-template-columns: 1fr;
+                gap: var(--l);
+            }
+            
+            .session-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--m);
+            }
+            
+            .session-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>LinkGo – Dev Auth Switcher</h1>
+        </div>
+        
+        <!-- Dev toggle -->
+        <button class="dev-toggle" id="dev-toggle" aria-label="Toggle debug panel">Dev</button>
+        
+        <!-- Login Cards -->
+        <div class="cards-grid">
+            <!-- Manager Card -->
+            <div class="card">
+                <h2>Manager</h2>
+                <div class="form-group">
+                    <label for="mgrEmail">Email</label>
+                    <input type="email" id="mgrEmail" placeholder="manager@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="mgrPass">Password</label>
+                    <input type="password" id="mgrPass" placeholder="••••••••">
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="saveMgr">
+                    <label for="saveMgr">Remember locally (dev)</label>
+                </div>
+                <div>
+                    <button class="btn btn-primary" id="loginMgr">Login as Manager</button>
+                    <button class="btn btn-secondary" id="gotoBrowse">Go to Browse</button>
+                </div>
+            </div>
+            
+            <!-- Talent Card -->
+            <div class="card">
+                <h2>Talent</h2>
+                <div class="form-group">
+                    <label for="talEmail">Email</label>
+                    <input type="email" id="talEmail" placeholder="talent@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="talPass">Password</label>
+                    <input type="password" id="talPass" placeholder="••••••••">
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="saveTal">
+                    <label for="saveTal">Remember locally (dev)</label>
+                </div>
+                <div>
+                    <button class="btn btn-primary" id="loginTal">Login as Talent</button>
+                    <button class="btn btn-secondary" id="gotoInbox">Go to Inbox</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Session Bar -->
+        <div class="session-bar" id="session-bar">
+            <div class="session-info">
+                <div class="session-details" id="session-details">
+                    <!-- Session info will be populated here -->
+                </div>
+                <div class="session-actions">
+                    <button class="btn btn-secondary" id="whoAmI">Who am I?</button>
+                    <button class="btn btn-secondary" id="logout">Logout</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Toast -->
+        <div class="toast" id="toast"></div>
+        
+        <!-- Dev Panel -->
+        <div class="dev-panel" id="dev-panel">
+            <div><strong>Auth:</strong> <pre id="out-auth"></pre></div>
+            <div><strong>Profile:</strong> <pre id="out-profile"></pre></div>
+            <div><strong>Debug:</strong> <pre id="out-debug"></pre></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import supa from '../js/supa.js';
+
+        // DOM elements
+        const sessionBar = document.getElementById('session-bar');
+        const sessionDetails = document.getElementById('session-details');
+        const toast = document.getElementById('toast');
+        const devToggle = document.getElementById('dev-toggle');
+        const devPanel = document.getElementById('dev-panel');
+        const outAuth = document.getElementById('out-auth');
+        const outProfile = document.getElementById('out-profile');
+        const outDebug = document.getElementById('out-debug');
+
+        // Helper functions
+        function toast(msg, type = 'success') {
+            toast.textContent = msg;
+            toast.className = `toast ${type}`;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+
+        function set(id, obj) {
+            const el = document.getElementById(id);
+            if (el) {
+                if (typeof obj === 'object') {
+                    el.textContent = JSON.stringify(obj, null, 2);
+                } else {
+                    el.textContent = obj;
+                }
+            }
+        }
+
+        function shorten(idStr) {
+            if (!idStr) return 'N/A';
+            return idStr.substring(0, 8) + '...';
+        }
+
+        function loadSaved() {
+            // Load saved manager credentials
+            const mgrEmail = localStorage.getItem('dev.mgr.email');
+            const mgrPass = localStorage.getItem('dev.mgr.pass');
+            const saveMgr = localStorage.getItem('dev.mgr.save') === 'true';
+            
+            if (mgrEmail) document.getElementById('mgrEmail').value = mgrEmail;
+            if (mgrPass) document.getElementById('mgrPass').value = mgrPass;
+            if (saveMgr) document.getElementById('saveMgr').checked = true;
+            
+            // Load saved talent credentials
+            const talEmail = localStorage.getItem('dev.tal.email');
+            const talPass = localStorage.getItem('dev.tal.pass');
+            const saveTal = localStorage.getItem('dev.tal.save') === 'true';
+            
+            if (talEmail) document.getElementById('talEmail').value = talEmail;
+            if (talPass) document.getElementById('talPass').value = talPass;
+            if (saveTal) document.getElementById('saveTal').checked = true;
+        }
+
+        function saveIfChecked(prefix) {
+            const email = document.getElementById(`${prefix}Email`).value;
+            const pass = document.getElementById(`${prefix}Pass`).value;
+            const save = document.getElementById(`save${prefix.charAt(0).toUpperCase() + prefix.slice(1)}`).checked;
+            
+            if (save && email && pass) {
+                localStorage.setItem(`dev.${prefix}.email`, email);
+                localStorage.setItem(`dev.${prefix}.pass`, pass);
+                localStorage.setItem(`dev.${prefix}.save`, 'true');
+            } else {
+                localStorage.removeItem(`dev.${prefix}.email`);
+                localStorage.removeItem(`dev.${prefix}.pass`);
+                localStorage.removeItem(`dev.${prefix}.save`);
+            }
+        }
+
+        function updateSessionBar() {
+            // Check if user is logged in
+            supa.Auth.getSession().then(({ data: session, error }) => {
+                if (error || !session) {
+                    sessionBar.classList.remove('show');
+                    return;
+                }
+
+                // Get profile info
+                supa.Profiles.getMyProfile().then(({ data: profile, error: profileError }) => {
+                    if (profileError || !profile) {
+                        sessionDetails.innerHTML = `
+                            <div>Logged in as: ${session.user.email}</div>
+                            <div>User ID: ${shorten(session.user.id)}</div>
+                            <div>Role: Unknown</div>
+                        `;
+                    } else {
+                        sessionDetails.innerHTML = `
+                            <div>Logged in as: ${session.user.email}</div>
+                            <div>User ID: ${shorten(session.user.id)}</div>
+                            <div>Role: ${profile.role}</div>
+                        `;
+                    }
+                    sessionBar.classList.add('show');
+                });
+            });
+        }
+
+        function toggleDevPanel() {
+            devPanel.classList.toggle('show');
+        }
+
+        // Login functions
+        async function loginAsManager() {
+            const email = document.getElementById('mgrEmail').value;
+            const password = document.getElementById('mgrPass').value;
+            
+            if (!email || !password) {
+                toast('Please enter email and password', 'error');
+                return;
+            }
+
+            try {
+                const { data, error } = await supa.Auth.signInWithPassword({ email, password });
+                if (error) throw error;
+
+                // Check role
+                const { data: profile, error: profileError } = await supa.Profiles.getMyProfile();
+                if (profileError || !profile) {
+                    toast('Could not load profile', 'error');
+                    return;
+                }
+
+                if (profile.role !== 'manager') {
+                    toast('Warning: This user is not a manager', 'warning');
+                } else {
+                    toast('Logged in as Manager');
+                }
+
+                saveIfChecked('mgr');
+                updateSessionBar();
+                set('out-auth', data);
+                set('out-profile', profile);
+                set('out-debug', 'Manager login successful');
+            } catch (error) {
+                console.error('Manager login failed:', error);
+                toast(`Login failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function loginAsTalent() {
+            const email = document.getElementById('talEmail').value;
+            const password = document.getElementById('talPass').value;
+            
+            if (!email || !password) {
+                toast('Please enter email and password', 'error');
+                return;
+            }
+
+            try {
+                const { data, error } = await supa.Auth.signInWithPassword({ email, password });
+                if (error) throw error;
+
+                // Check role
+                const { data: profile, error: profileError } = await supa.Profiles.getMyProfile();
+                if (profileError || !profile) {
+                    toast('Could not load profile', 'error');
+                    return;
+                }
+
+                if (profile.role !== 'talent') {
+                    toast('Warning: This user is not a talent', 'warning');
+                } else {
+                    toast('Logged in as Talent');
+                }
+
+                saveIfChecked('tal');
+                updateSessionBar();
+                set('out-auth', data);
+                set('out-profile', profile);
+                set('out-debug', 'Talent login successful');
+            } catch (error) {
+                console.error('Talent login failed:', error);
+                toast(`Login failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function whoAmI() {
+            try {
+                const { data: session, error: sessionError } = await supa.Auth.getSession();
+                const { data: profile, error: profileError } = await supa.Profiles.getMyProfile();
+                
+                set('out-auth', session || 'No session');
+                set('out-profile', profile || 'No profile');
+                set('out-debug', `Session error: ${sessionError?.message || 'None'}, Profile error: ${profileError?.message || 'None'}`);
+                
+                toast('Session info updated');
+            } catch (error) {
+                console.error('Who am I failed:', error);
+                toast(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function logout() {
+            try {
+                const { error } = await supa.Auth.signOut();
+                if (error) throw error;
+                
+                sessionBar.classList.remove('show');
+                set('out-auth', 'Logged out');
+                set('out-profile', 'Logged out');
+                set('out-debug', 'Logout successful');
+                toast('Utloggad');
+            } catch (error) {
+                console.error('Logout failed:', error);
+                toast(`Logout failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Navigation functions
+        function goToBrowse() {
+            window.location.href = './browse.html';
+        }
+
+        function goToInbox() {
+            window.location.href = './bookings.html';
+        }
+
+        // Event listeners
+        document.getElementById('loginMgr').onclick = loginAsManager;
+        document.getElementById('loginTal').onclick = loginAsTalent;
+        document.getElementById('gotoBrowse').onclick = goToBrowse;
+        document.getElementById('gotoInbox').onclick = goToInbox;
+        document.getElementById('whoAmI').onclick = whoAmI;
+        document.getElementById('logout').onclick = logout;
+        devToggle.onclick = toggleDevPanel;
+
+        // Initialize
+        loadSaved();
+        updateSessionBar();
+    </script>
+</body>
+</html>

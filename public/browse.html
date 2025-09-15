@@ -7,118 +7,302 @@
     <link rel="stylesheet" href="./tokens.css">
     <script src="./config.js"></script>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+        
         body {
-            padding: var(--l);
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.6;
+            background: var(--bg);
+            color: var(--text);
         }
+        
+        /* Session bar */
+        .session-bar {
+            background: var(--surface);
+            border-bottom: 1px solid var(--muted);
+            padding: var(--s) var(--l);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            color: var(--subtle);
+        }
+        
+        .session-info {
+            display: flex;
+            align-items: center;
+            gap: var(--m);
+        }
+        
+        .session-actions {
+            display: flex;
+            align-items: center;
+            gap: var(--s);
+        }
+        
+        .session-actions a {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        
+        .session-actions a:hover {
+            text-decoration: underline;
+        }
+        
+        .session-actions button {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: var(--xs) var(--s);
+            border-radius: 4px;
+        }
+        
+        .session-actions button:hover {
+            background: var(--muted);
+        }
+        
         .container {
-            max-width: 840px;
+            max-width: 960px;
             margin: 0 auto;
+            padding: var(--l);
         }
+        
+        /* Topbar */
+        .topbar {
+            text-align: center;
+            margin-bottom: var(--xxl);
+        }
+        
+        .topbar h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0 0 var(--s) 0;
+            color: var(--text);
+        }
+        
+        .topbar .subtext {
+            color: var(--subtle);
+            font-size: 1.1rem;
+            margin: 0;
+        }
+        
+        /* Dev toggle */
+        .dev-toggle {
+            position: fixed;
+            top: var(--l);
+            right: var(--l);
+            background: var(--muted);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: var(--subtle);
+            z-index: 1000;
+        }
+        
+        .dev-toggle:hover {
+            background: var(--primary);
+            color: var(--bg);
+        }
+        
+        /* Cards */
         .card {
             background: var(--surface);
             border: 1px solid var(--muted);
-            border-radius: 12px;
+            border-radius: 16px;
             padding: var(--xl);
             margin-bottom: var(--l);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
-        .filters {
-            display: flex;
-            gap: var(--m);
-            flex-wrap: wrap;
-            align-items: end;
-            margin-bottom: var(--l);
-        }
-        .filters input, .filters select {
-            flex: 1;
-            min-width: 120px;
-        }
-        .filters button {
-            background: var(--primary);
-            color: var(--bg);
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-        }
-        .filters button:disabled {
-            background: var(--muted);
-            color: var(--subtle);
-            cursor: not-allowed;
-        }
-        .dialog {
+        
+        /* Filter card */
+        .filter-card {
             background: var(--surface);
             border: 1px solid var(--muted);
             border-radius: 12px;
-            padding: var(--xl);
-            margin-bottom: var(--l);
-            display: none;
+            padding: var(--l);
+            margin-bottom: var(--xl);
         }
-        .dialog h3 {
-            margin-top: 0;
-            color: var(--primary);
-        }
-        .dialog-fields {
+        
+        .filters {
             display: grid;
+            grid-template-columns: 1fr 1fr auto auto auto;
             gap: var(--m);
-            margin-bottom: var(--l);
+            align-items: end;
         }
-        .dialog-fields input, .dialog-fields select, .dialog-fields textarea {
-            width: 100%;
+        
+        .filters input, .filters select {
+            padding: var(--m);
+            border: 1px solid var(--muted);
+            border-radius: 8px;
+            font-size: 1rem;
+            background: var(--bg);
         }
-        .dialog-fields textarea {
-            min-height: 80px;
-            resize: vertical;
+        
+        .filters input:focus, .filters select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
         }
-        .dialog-buttons {
-            display: flex;
-            gap: var(--m);
-            justify-content: flex-end;
-        }
-        .dialog-buttons button {
+        
+        .btn {
             padding: var(--m) var(--l);
-        }
-        .dialog-buttons button[type="submit"] {
-            background: var(--success);
-            color: var(--bg);
             border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
-        .dialog-buttons button[type="button"] {
+        
+        .btn-primary {
+            background: var(--primary);
+            color: var(--bg);
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark, var(--primary));
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
             background: var(--muted);
             color: var(--text);
-            border: none;
         }
-        .talent-card {
+        
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--subtle);
+        }
+        
+        .btn:disabled {
             background: var(--muted);
-            border-radius: 8px;
+            color: var(--subtle);
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* Talent cards */
+        .talent-card {
+            background: var(--surface);
+            border: 1px solid var(--muted);
+            border-radius: 12px;
             padding: var(--l);
             margin-bottom: var(--m);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: all 0.2s ease;
         }
-        .talent-info h4 {
+        
+        .talent-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .talent-info h3 {
             margin: 0 0 var(--s) 0;
+            font-size: 1.2rem;
+            font-weight: 600;
             color: var(--text);
         }
+        
         .talent-info p {
-            margin: 0;
+            margin: 0 0 var(--s) 0;
             color: var(--subtle);
-            font-size: 0.9em;
         }
-        .talent-actions button {
+        
+        .role-pills {
+            display: flex;
+            gap: var(--s);
+            margin-top: var(--s);
+        }
+        
+        .role-pill {
             background: var(--primary);
             color: var(--bg);
-            border: none;
-            padding: var(--m) var(--l);
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
+            padding: var(--xs) var(--s);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
         }
-        .talent-actions button:disabled {
+        
+        .role-pill.unknown {
             background: var(--muted);
             color: var(--subtle);
-            cursor: not-allowed;
         }
+        
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .modal {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: var(--xxl);
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal h2 {
+            margin: 0 0 var(--l) 0;
+            color: var(--primary);
+            font-size: 1.5rem;
+        }
+        
+        .modal-fields {
+            display: grid;
+            gap: var(--l);
+            margin-bottom: var(--xl);
+        }
+        
+        .modal-fields input, .modal-fields select, .modal-fields textarea {
+            width: 100%;
+            padding: var(--m);
+            border: 1px solid var(--muted);
+            border-radius: 8px;
+            font-size: 1rem;
+            background: var(--bg);
+        }
+        
+        .modal-fields input:focus, .modal-fields select:focus, .modal-fields textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+        }
+        
+        .modal-fields textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: var(--m);
+            justify-content: flex-end;
+        }
+        
+        /* Toast */
         .toast {
             position: fixed;
             top: var(--l);
@@ -126,50 +310,146 @@
             background: var(--success);
             color: var(--bg);
             padding: var(--m) var(--l);
-            border-radius: 6px;
+            border-radius: 8px;
             display: none;
-            z-index: 1000;
+            z-index: 3000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
+        
         .toast.error {
             background: var(--danger);
         }
-        .debug {
+        
+        /* States */
+        .loading-skeleton {
             background: var(--muted);
-            border-radius: 6px;
+            border-radius: 8px;
+            height: 60px;
+            margin-bottom: var(--m);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .empty-state {
+            text-align: center;
+            color: var(--subtle);
+            padding: var(--xxl);
+            font-style: italic;
+        }
+        
+        .error-card {
+            background: var(--danger);
+            color: var(--bg);
+            border-radius: 12px;
+            padding: var(--xl);
+            text-align: center;
+            margin-bottom: var(--l);
+        }
+        
+        .error-card a {
+            color: var(--bg);
+            text-decoration: underline;
+        }
+        
+        /* Dev panel */
+        .dev-panel {
+            background: var(--muted);
+            border-radius: 8px;
             padding: var(--m);
             margin-top: var(--l);
-            font-family: monospace;
-            font-size: 0.8em;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.8rem;
             white-space: pre-wrap;
+            display: none;
         }
-        .error-message {
-            color: var(--danger);
-            text-align: center;
-            padding: var(--xl);
+        
+        .dev-panel.show {
+            display: block;
         }
-        .error-message a {
-            color: var(--primary);
-            text-decoration: none;
-        }
-        .error-message a:hover {
-            text-decoration: underline;
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .filters {
+                grid-template-columns: 1fr;
+                gap: var(--m);
+            }
+            
+            .talent-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--m);
+            }
+            
+            .modal {
+                margin: var(--l);
+                width: calc(100% - 2 * var(--l));
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Session bar -->
+    <div class="session-bar" id="session-bar">
+        <div class="session-info" id="session-info">
+            <!-- Session info will be populated here -->
+        </div>
+        <div class="session-actions" id="session-actions">
+            <!-- Session actions will be populated here -->
+        </div>
+    </div>
+    
     <div class="container">
-        <h1>LinkGo – Katalog</h1>
+        <!-- Topbar -->
+        <div class="topbar">
+            <h1>LinkGo – Katalog</h1>
+            <p class="subtext">Hitta och boka domare/tränare</p>
+        </div>
         
-        <div class="card" id="card-content">
+        <!-- Dev toggle -->
+        <button class="dev-toggle" id="dev-toggle" aria-label="Toggle debug panel">Dev</button>
+        
+        <!-- Main content -->
+        <div id="main-content">
             <!-- Content will be loaded here -->
         </div>
         
+        <!-- Toast -->
         <div class="toast" id="toast"></div>
         
-        <div class="debug">
-            <div>Session: <pre id="out-session"></pre></div>
-            <div>Profile: <pre id="out-profile"></pre></div>
-            <div>Debug: <pre id="out-debug"></pre></div>
+        <!-- Dev panel -->
+        <div class="dev-panel" id="dev-panel">
+            <div><strong>Session:</strong> <pre id="out-session"></pre></div>
+            <div><strong>Profile:</strong> <pre id="out-profile"></pre></div>
+            <div><strong>Debug:</strong> <pre id="out-debug"></pre></div>
+        </div>
+    </div>
+
+    <!-- Request Modal -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal" id="modal">
+            <h2>Skicka förfrågan till: <span id="modal-talent-name">–</span></h2>
+            <input type="hidden" id="modal-talent-id">
+            
+            <div class="modal-fields">
+                <input type="datetime-local" id="modal-start" required aria-label="Starttid">
+                <input type="datetime-local" id="modal-end" required aria-label="Sluttid">
+                <input type="text" id="modal-location" placeholder="Plats..." required aria-label="Plats">
+                <select id="modal-role" required aria-label="Roll">
+                    <option value="">Välj roll...</option>
+                    <option value="referee">Domare</option>
+                    <option value="coach">Tränare</option>
+                </select>
+                <textarea id="modal-message" placeholder="Meddelande..." aria-label="Meddelande"></textarea>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" id="modal-cancel">Avbryt</button>
+                <button class="btn btn-primary" id="modal-send">Skicka</button>
+            </div>
         </div>
     </div>
 
@@ -189,15 +469,22 @@
                 offset: 0,
                 total: 0
             },
-            requestedTalents: new Set() // Track which talents have been requested
+            requestedTalents: new Set(),
+            loading: false
         };
 
         // DOM elements
-        const cardContent = document.getElementById('card-content');
+        const mainContent = document.getElementById('main-content');
         const toast = document.getElementById('toast');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modal = document.getElementById('modal');
+        const devToggle = document.getElementById('dev-toggle');
+        const devPanel = document.getElementById('dev-panel');
         const outSession = document.getElementById('out-session');
         const outProfile = document.getElementById('out-profile');
         const outDebug = document.getElementById('out-debug');
+        const sessionInfo = document.getElementById('session-info');
+        const sessionActions = document.getElementById('session-actions');
 
         // Helper functions
         function set(id, val) {
@@ -211,31 +498,67 @@
             }
         }
 
-        function show(el) {
-            if (typeof el === 'string') el = document.getElementById(el);
-            if (el) el.style.display = 'block';
-        }
-
-        function hide(el) {
-            if (typeof el === 'string') el = document.getElementById(el);
-            if (el) el.style.display = 'none';
-        }
-
-        function fmtRoles(talent) {
-            const roles = [];
-            if (talent.is_referee) roles.push('referee');
-            if (talent.is_coach) roles.push('coach');
-            return roles.length > 0 ? roles.join(' / ') : 'okänd roll';
-        }
-
         function showToast(message, isError = false) {
             toast.textContent = message;
             toast.className = isError ? 'toast error' : 'toast';
-            show(toast);
-            setTimeout(() => hide(toast), 3000);
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
         }
 
-        // Load filters from localStorage
+        function showModal() {
+            modalOverlay.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            // Focus trap - focus first input
+            document.getElementById('modal-start').focus();
+        }
+
+        function hideModal() {
+            modalOverlay.style.display = 'none';
+            document.body.style.overflow = '';
+            // Clear form
+            document.getElementById('modal-start').value = '';
+            document.getElementById('modal-end').value = '';
+            document.getElementById('modal-location').value = '';
+            document.getElementById('modal-role').value = '';
+            document.getElementById('modal-message').value = '';
+        }
+
+        function toggleDevPanel() {
+            devPanel.classList.toggle('show');
+        }
+
+        // Session bar helpers
+        function renderSessionBar(session, profile) {
+            if (session && session.user) {
+                sessionInfo.innerHTML = `Signed in: ${session.user.email} • role: ${profile?.role || 'unknown'}`;
+                sessionActions.innerHTML = '<button onclick="onLogout()">Logout</button>';
+            } else {
+                sessionInfo.innerHTML = 'Not signed in';
+                sessionActions.innerHTML = '<a href="login.html">Login</a> • <a href="dev-auth.html">Dev Auth</a>';
+            }
+        }
+
+        async function onLogout() {
+            try {
+                await supa.Auth.signOut();
+                location.reload();
+            } catch (error) {
+                console.error('Logout failed:', error);
+                showToast('Logout failed', true);
+            }
+        }
+
+        // Format roles as pills
+        function fmtRoles(talent) {
+            const roles = [];
+            if (talent.is_referee) roles.push('Domare');
+            if (talent.is_coach) roles.push('Tränare');
+            return roles.length > 0 ? roles : ['Okänd roll'];
+        }
+
+        // Load/save filters from localStorage
         function loadFilters() {
             const saved = localStorage.getItem('browse.filters');
             if (saved) {
@@ -248,31 +571,40 @@
             }
         }
 
-        // Save filters to localStorage
         function saveFilters() {
             localStorage.setItem('browse.filters', JSON.stringify(state.filters));
         }
 
-        // Session and role guard
+        // Check for debug mode in URL
+        function checkDebugMode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('debug') === '1') {
+                devPanel.classList.add('show');
+            }
+        }
+
+        // Authentication guard
         async function checkAuth() {
             try {
                 const { data: session, error: sessionError } = await supa.Auth.getSession();
                 set('out-session', session ? JSON.stringify(session, null, 2) : 'No session');
                 
+                // Always render session bar regardless of auth status
+                const { data: profile, error: profileError } = await supa.Profiles.getMyProfile();
+                set('out-profile', profile ? JSON.stringify(profile, null, 2) : 'No profile');
+                renderSessionBar(session, profile);
+                
                 if (sessionError || !session) {
                     showNotLoggedIn();
                     return false;
                 }
-
-                const { data: me, error: profileError } = await supa.Profiles.getMyProfile();
-                set('out-profile', me ? JSON.stringify(me, null, 2) : 'No profile');
                 
-                if (profileError || !me) {
+                if (profileError || !profile) {
                     showError('Kunde inte ladda profil');
                     return false;
                 }
 
-                if (me.role !== 'manager') {
+                if (profile.role !== 'manager') {
                     showNotManager();
                     return false;
                 }
@@ -280,31 +612,37 @@
                 return true;
             } catch (error) {
                 console.error('Auth check failed:', error);
+                // Still render session bar even on error
+                renderSessionBar(null, null);
                 showError('Autentisering misslyckades');
                 return false;
             }
         }
 
         function showNotLoggedIn() {
-            cardContent.innerHTML = `
-                <div class="error-message">
-                    Du är inte inloggad. <a href="login.html">Logga in på login.html</a>.
+            mainContent.innerHTML = `
+                <div class="error-card">
+                    <h2>Du är inte inloggad</h2>
+                    <p>Logga in för att komma åt katalogen</p>
+                    <a href="login.html">Logga in här</a>
                 </div>
             `;
         }
 
         function showNotManager() {
-            cardContent.innerHTML = `
-                <div class="error-message">
-                    Endast managers har åtkomst till denna sida.
+            mainContent.innerHTML = `
+                <div class="error-card">
+                    <h2>Endast managers</h2>
+                    <p>Endast managers har åtkomst till denna sida. Kontakta administratören för att byta konto.</p>
                 </div>
             `;
         }
 
         function showError(message) {
-            cardContent.innerHTML = `
-                <div class="error-message">
-                    ${message}
+            mainContent.innerHTML = `
+                <div class="error-card">
+                    <h2>Ett fel uppstod</h2>
+                    <p>${message}</p>
                 </div>
             `;
         }
@@ -319,9 +657,7 @@
                     cursor: state.page.cursorNext
                 });
 
-                if (error) {
-                    throw error;
-                }
+                if (error) throw error;
 
                 return {
                     items: data?.items || [],
@@ -334,7 +670,7 @@
             }
         }
 
-        // Fallback API: direct v_talent_catalog query
+        // Fallback API: direct v_talent_catalog query with offset pagination
         async function searchTalentsFallback() {
             try {
                 let query = supa.client
@@ -343,6 +679,7 @@
                     .order('full_name', { ascending: true })
                     .range(state.page.offset, state.page.offset + state.filters.limit - 1);
 
+                // Apply ilike filters
                 if (state.filters.q && state.filters.q.trim()) {
                     query = query.ilike('full_name', `%${state.filters.q}%`);
                 }
@@ -380,7 +717,7 @@
                     result = await searchTalentsFallback();
                 }
 
-                // Update cursor state for next/prev navigation
+                // Update cursor state for pagination
                 state.page.cursorNext = result.nextCursor;
                 state.page.cursorPrev = result.prevCursor;
 
@@ -394,39 +731,20 @@
             }
         }
 
-        // Render the main interface
+        // Render main interface
         function renderInterface() {
-            cardContent.innerHTML = `
-                <div class="filters">
-                    <input type="text" id="q" placeholder="Sök namn..." value="${state.filters.q}">
-                    <input type="text" id="region" placeholder="Region..." value="${state.filters.region}">
-                    <input type="number" id="limit" min="1" max="50" value="${state.filters.limit}">
-                    <button id="btn-search">Sök</button>
-                    <button id="btn-prev" disabled>Föregående</button>
-                    <button id="btn-next" disabled>Nästa</button>
-                </div>
-
-                <div class="dialog" id="request-dialog">
-                    <h3>Skicka förfrågan till: <span id="dlg-target-name">–</span></h3>
-                    <input type="hidden" id="dlg-target-id">
-                    <div class="dialog-fields">
-                        <input type="datetime-local" id="dlg-start" required>
-                        <input type="datetime-local" id="dlg-end" required>
-                        <input type="text" id="dlg-location" placeholder="Plats..." required>
-                        <select id="dlg-role" required>
-                            <option value="">Välj roll...</option>
-                            <option value="referee">Referee</option>
-                            <option value="coach">Coach</option>
-                        </select>
-                        <textarea id="dlg-message" placeholder="Meddelande..."></textarea>
-                    </div>
-                    <div class="dialog-buttons">
-                        <button type="button" id="dlg-cancel">Avbryt</button>
-                        <button type="submit" id="dlg-send">Skicka</button>
+            mainContent.innerHTML = `
+                <div class="filter-card">
+                    <div class="filters">
+                        <input type="text" id="q" placeholder="Sök namn..." value="${state.filters.q}">
+                        <input type="text" id="region" placeholder="Region..." value="${state.filters.region}">
+                        <input type="number" id="limit" min="1" max="50" value="${state.filters.limit}">
+                        <button class="btn btn-primary" id="btn-search">Sök</button>
+                        <button class="btn btn-secondary" id="btn-prev" disabled>Föregående</button>
+                        <button class="btn btn-secondary" id="btn-next" disabled>Nästa</button>
                     </div>
                 </div>
-
-                <div id="list"></div>
+                <div id="results"></div>
             `;
 
             // Attach event listeners
@@ -461,17 +779,38 @@
                 loadTalents();
             };
 
-            document.getElementById('dlg-cancel').onclick = closeDialog;
-            document.getElementById('dlg-send').onclick = sendRequest;
+            // Modal event listeners
+            document.getElementById('modal-cancel').onclick = hideModal;
+            document.getElementById('modal-send').onclick = sendRequest;
+            
+            // Close modal on overlay click
+            modalOverlay.onclick = (e) => {
+                if (e.target === modalOverlay) hideModal();
+            };
+            
+            // Close modal on Escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modalOverlay.style.display === 'flex') {
+                    hideModal();
+                }
+            });
         }
 
         // Load and display talents
         async function loadTalents() {
+            state.loading = true;
+            const resultsEl = document.getElementById('results');
+            
+            // Show loading skeleton
+            resultsEl.innerHTML = Array(3).fill(0).map(() => 
+                '<div class="loading-skeleton"></div>'
+            ).join('');
+
             const result = await searchTalents();
-            const listEl = document.getElementById('list');
+            state.loading = false;
             
             if (!result.items || result.items.length === 0) {
-                listEl.innerHTML = '<p style="text-align: center; color: var(--subtle); padding: var(--xl);">Inga talanger hittades</p>';
+                resultsEl.innerHTML = '<div class="empty-state">Inga träffar hittades</div>';
                 document.getElementById('btn-prev').disabled = true;
                 document.getElementById('btn-next').disabled = true;
                 return;
@@ -483,48 +822,43 @@
                 (state.page.total > 0 && state.page.offset + state.filters.limit >= state.page.total);
 
             // Render talent cards
-            listEl.innerHTML = result.items.map(talent => `
-                <div class="talent-card">
-                    <div class="talent-info">
-                        <h4>${talent.full_name}</h4>
-                        <p>${talent.region} • ${fmtRoles(talent)}</p>
-                    </div>
-                    <div class="talent-actions">
+            resultsEl.innerHTML = result.items.map(talent => {
+                const roles = fmtRoles(talent);
+                return `
+                    <div class="talent-card">
+                        <div class="talent-info">
+                            <h3>${talent.full_name}</h3>
+                            <p>${talent.region}</p>
+                            <div class="role-pills">
+                                ${roles.map(role => `<span class="role-pill ${role === 'Okänd roll' ? 'unknown' : ''}">${role}</span>`).join('')}
+                            </div>
+                        </div>
                         <button 
+                            class="btn btn-primary"
                             onclick="openRequestDialog('${talent.id}', '${talent.full_name}')"
                             ${state.requestedTalents.has(talent.id) ? 'disabled' : ''}
                         >
-                            ${state.requestedTalents.has(talent.id) ? 'Skickad' : 'Request'}
+                            ${state.requestedTalents.has(talent.id) ? 'Skickad' : 'Skicka förfrågan'}
                         </button>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         // Request dialog functions
         function openRequestDialog(talentId, talentName) {
-            document.getElementById('dlg-target-id').value = talentId;
-            document.getElementById('dlg-target-name').textContent = talentName;
-            show('request-dialog');
-        }
-
-        function closeDialog() {
-            hide('request-dialog');
-            // Clear form
-            document.getElementById('dlg-start').value = '';
-            document.getElementById('dlg-end').value = '';
-            document.getElementById('dlg-location').value = '';
-            document.getElementById('dlg-role').value = '';
-            document.getElementById('dlg-message').value = '';
+            document.getElementById('modal-talent-id').value = talentId;
+            document.getElementById('modal-talent-name').textContent = talentName;
+            showModal();
         }
 
         async function sendRequest() {
-            const talentId = document.getElementById('dlg-target-id').value;
-            const start = document.getElementById('dlg-start').value;
-            const end = document.getElementById('dlg-end').value;
-            const location = document.getElementById('dlg-location').value;
-            const role = document.getElementById('dlg-role').value;
-            const message = document.getElementById('dlg-message').value;
+            const talentId = document.getElementById('modal-talent-id').value;
+            const start = document.getElementById('modal-start').value;
+            const end = document.getElementById('modal-end').value;
+            const location = document.getElementById('modal-location').value;
+            const role = document.getElementById('modal-role').value;
+            const message = document.getElementById('modal-message').value;
 
             // Validation
             if (!start || !end || !location || !role) {
@@ -543,13 +877,14 @@
             }
 
             try {
+                // RLS requirement: Insert with proper manager_id from session
                 const { data, error } = await supa.client
                     .from('bookings')
                     .insert([{
                         manager_id: (await supa.Auth.getSession()).data.user.id,
                         talent_id: talentId,
                         role_at_booking: role,
-                        start_ts: new Date(start).toISOString(),
+                        start_ts: new Date(start).toISOString(), // Convert datetime-local to ISO
                         end_ts: new Date(end).toISOString(),
                         location,
                         message,
@@ -561,9 +896,9 @@
                 if (error) throw error;
 
                 showToast('Förfrågan skickad');
-                closeDialog();
+                hideModal();
                 
-                // Mark talent as requested
+                // Mark talent as requested and disable button
                 state.requestedTalents.add(talentId);
                 
                 // Reload the list to update button states
@@ -577,6 +912,7 @@
         // Initialize the application
         async function init() {
             loadFilters();
+            checkDebugMode();
             
             const isAuthenticated = await checkAuth();
             if (!isAuthenticated) return;
@@ -584,6 +920,13 @@
             renderInterface();
             await loadTalents();
         }
+
+        // Make functions globally available for onclick handlers
+        window.openRequestDialog = openRequestDialog;
+        window.onLogout = onLogout;
+
+        // Dev toggle
+        devToggle.onclick = toggleDevPanel;
 
         // Start the application
         init();

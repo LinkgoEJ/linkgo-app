@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kom igång - LinkGo</title>
+    <link rel="stylesheet" href="./tokens.css">
+    <link rel="stylesheet" href="./config.js">
+</head>
+<body>
+    <div style="max-width: 600px; margin: 0 auto; padding: var(--xl);">
+        <h1 style="text-align: center; margin-bottom: var(--xxl);">Kom igång</h1>
+        
+        <!-- Login required card -->
+        <div id="login-required" style="display: none; background: var(--surface); border: 1px solid var(--muted); border-radius: 12px; padding: var(--xl); text-align: center;">
+            <p style="margin-bottom: var(--l);">Du måste logga in för att slutföra din profil.</p>
+            <a href="./login.html" style="display: inline-block; background: var(--primary); color: var(--bg); padding: 12px 24px; border-radius: 12px; text-decoration: none;">Logga in</a>
+        </div>
+
+        <!-- Profile setup form -->
+        <div id="profile-form" style="display: none;">
+            <div style="background: var(--surface); border: 1px solid var(--muted); border-radius: 12px; padding: var(--xl);">
+                <div style="margin-bottom: var(--l);">
+                    <label for="full_name" style="display: block; margin-bottom: var(--s); font-weight: 600;">Namn</label>
+                    <input type="text" id="full_name" placeholder="Ditt fullständiga namn" style="width: 100%; padding: 12px; border: 1px solid var(--muted); border-radius: 8px; background: var(--bg); color: var(--text);">
+                </div>
+                
+                <div style="margin-bottom: var(--xl);">
+                    <label for="region" style="display: block; margin-bottom: var(--s); font-weight: 600;">Region</label>
+                    <input type="text" id="region" placeholder="Din region (t.ex. Stockholm, Göteborg)" style="width: 100%; padding: 12px; border: 1px solid var(--muted); border-radius: 8px; background: var(--bg); color: var(--text);">
+                </div>
+                
+                <button id="save-profile" style="width: 100%; background: var(--primary); color: var(--bg); border: none; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer;">Spara</button>
+            </div>
+        </div>
+
+        <!-- Success CTA cards -->
+        <div id="success-cta" style="display: none;">
+            <!-- Manager CTA -->
+            <div id="manager-cta" style="display: none; background: var(--surface); border: 1px solid var(--success); border-radius: 12px; padding: var(--xl); text-align: center;">
+                <h3 style="color: var(--success); margin-bottom: var(--l);">Profil sparad!</h3>
+                <p style="margin-bottom: var(--l);">Din profil är nu komplett. Börja söka efter talanger för dina evenemang.</p>
+                <a href="./browse.html" style="display: inline-block; background: var(--success); color: var(--bg); padding: 12px 24px; border-radius: 12px; text-decoration: none;">Gå till katalog</a>
+            </div>
+
+            <!-- Talent CTA -->
+            <div id="talent-cta" style="display: none; background: var(--surface); border: 1px solid var(--success); border-radius: 12px; padding: var(--xl); text-align: center;">
+                <h3 style="color: var(--success); margin-bottom: var(--l);">Profil sparad!</h3>
+                <p style="margin-bottom: var(--l);">Din profil är nu komplett. Du kan nu ta emot förfrågningar från managers.</p>
+                <a href="./bookings.html" style="display: inline-block; background: var(--success); color: var(--bg); padding: 12px 24px; border-radius: 12px; text-decoration: none;">Gå till förfrågningar</a>
+            </div>
+        </div>
+
+        <!-- Toast container -->
+        <div id="toast" style="position: fixed; top: var(--l); right: var(--l); background: var(--surface); border: 1px solid var(--muted); border-radius: 12px; padding: var(--l); display: none; z-index: 1000; max-width: 300px;"></div>
+    </div>
+
+    <script type="module">
+        import supa from '../js/supa.js';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const debug = urlParams.get('debug') === '1';
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.display = 'block';
+            toast.style.borderColor = type === 'error' ? 'var(--danger)' : type === 'success' ? 'var(--success)' : 'var(--muted)';
+            
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+
+        function debugLog(message, data = null) {
+            if (debug) {
+                console.log(`[DEBUG] ${message}`, data);
+            }
+        }
+
+        async function checkAuth() {
+            try {
+                const { data: session, error } = await supa.Auth.getSession();
+                
+                if (error) {
+                    debugLog('Auth check error:', error);
+                    showLoginRequired();
+                    return false;
+                }
+
+                if (!session || !session.user) {
+                    debugLog('No session found');
+                    showLoginRequired();
+                    return false;
+                }
+
+                debugLog('User authenticated:', session.user.id);
+                return true;
+            } catch (err) {
+                debugLog('Auth check exception:', err);
+                showLoginRequired();
+                return false;
+            }
+        }
+
+        function showLoginRequired() {
+            document.getElementById('login-required').style.display = 'block';
+            document.getElementById('profile-form').style.display = 'none';
+            document.getElementById('success-cta').style.display = 'none';
+        }
+
+        function showProfileForm() {
+            document.getElementById('login-required').style.display = 'none';
+            document.getElementById('profile-form').style.display = 'block';
+            document.getElementById('success-cta').style.display = 'none';
+        }
+
+        function showSuccessCTA(role) {
+            document.getElementById('login-required').style.display = 'none';
+            document.getElementById('profile-form').style.display = 'none';
+            document.getElementById('success-cta').style.display = 'block';
+            
+            if (role === 'manager') {
+                document.getElementById('manager-cta').style.display = 'block';
+                document.getElementById('talent-cta').style.display = 'none';
+            } else if (role === 'talent') {
+                document.getElementById('manager-cta').style.display = 'none';
+                document.getElementById('talent-cta').style.display = 'block';
+            }
+        }
+
+        async function loadProfile() {
+            try {
+                const { data: profile, error } = await supa.Profiles.getMyProfile();
+                
+                if (error) {
+                    debugLog('Profile load error:', error);
+                    showToast(`Fel vid laddning av profil: ${error.message}`, 'error');
+                    return;
+                }
+
+                if (profile) {
+                    debugLog('Profile loaded:', profile);
+                    
+                    // Pre-fill form fields if data exists
+                    if (profile.full_name) {
+                        document.getElementById('full_name').value = profile.full_name;
+                    }
+                    if (profile.region) {
+                        document.getElementById('region').value = profile.region;
+                    }
+                }
+
+                showProfileForm();
+            } catch (err) {
+                debugLog('Profile load exception:', err);
+                showToast(`Fel vid laddning av profil: ${err.message}`, 'error');
+                showProfileForm();
+            }
+        }
+
+        async function saveProfile() {
+            try {
+                const full_name = document.getElementById('full_name').value.trim();
+                const region = document.getElementById('region').value.trim();
+
+                if (!full_name) {
+                    showToast('Namn är obligatoriskt', 'error');
+                    return;
+                }
+
+                if (!region) {
+                    showToast('Region är obligatoriskt', 'error');
+                    return;
+                }
+
+                debugLog('Saving profile:', { full_name, region });
+                showToast('Sparar profil...', 'info');
+
+                const { data, error } = await supa.Profiles.upsertMyProfile({ full_name, region });
+                
+                if (error) {
+                    debugLog('Profile save error:', error);
+                    showToast(`Fel vid sparande: ${error.message}`, 'error');
+                    return;
+                }
+
+                debugLog('Profile saved successfully:', data);
+                showToast('Profil sparad!', 'success');
+                
+                // Show appropriate CTA based on role
+                const role = data?.role || 'manager'; // Default to manager if role not found
+                showSuccessCTA(role);
+            } catch (err) {
+                debugLog('Profile save exception:', err);
+                showToast(`Fel vid sparande: ${err.message}`, 'error');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('save-profile').addEventListener('click', saveProfile);
+
+        // Initialize
+        async function init() {
+            const isAuthenticated = await checkAuth();
+            if (!isAuthenticated) return;
+
+            await loadProfile();
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <title>LinkGo – Skapa konto</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Design tokens (colors, spacing, radii, etc.) -->
+  <link rel="stylesheet" href="./tokens.css" />
+
+  <style>
+    :root {
+      /* Fallbacks if någon token saknas i tokens.css */
+      --surface: var(--bg, #0b0b0c);
+      --text: var(--fg, #e7e7ea);
+      --muted: var(--muted-600, #1a1b1e);
+      --primary: var(--accent, #3b82f6);
+      --success: var(--success, #10b981);
+      --danger: var(--danger, #ef4444);
+      --m: var(--space-4, 12px);
+      --l: var(--space-6, 16px);
+      --xl: var(--space-8, 24px);
+      --radius: var(--radius-lg, 16px);
+      --shadow: 0 8px 24px rgba(0,0,0,0.25);
+      --border: 1px solid color-mix(in oklab, var(--muted), #ffffff 6%);
+    }
+
+    html, body {
+      height: 100%;
+      background: color-mix(in oklab, var(--surface), #000 6%);
+      color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .wrap {
+      min-height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 32px 16px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 420px;
+      margin: 60px auto;
+      padding: 24px;
+      border-radius: var(--radius);
+      background: var(--surface);
+      border: var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .title {
+      margin: 0 0 var(--xl);
+      font-weight: 650;
+      font-size: 22px;
+      letter-spacing: -0.01em;
+      text-align: center;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      margin-bottom: var(--m);
+    }
+
+    label {
+      font-size: 12px;
+      color: color-mix(in oklab, var(--text), #ffffff 60%);
+    }
+
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: color-mix(in oklab, var(--surface), #ffffff 4%);
+      border: 1px solid color-mix(in oklab, var(--muted), #ffffff 8%);
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+    }
+
+    input::placeholder { color: color-mix(in oklab, var(--text), #ffffff 70%); }
+
+    input:focus {
+      border-color: color-mix(in oklab, var(--primary), #ffffff 10%);
+      box-shadow: 0 0 0 6px color-mix(in oklab, var(--primary), transparent 85%);
+      background: color-mix(in oklab, var(--surface), #ffffff 6%);
+    }
+
+    .btn-primary {
+      appearance: none;
+      border: none;
+      background: var(--primary);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background .15s ease, transform .02s ease;
+      width: 100%;
+      margin: var(--l) 0;
+    }
+
+    .btn-primary:hover,
+    .btn-primary:focus-visible {
+      background: color-mix(in oklab, var(--primary), #ffffff 10%);
+      outline: none;
+    }
+
+    .btn-primary:active { transform: translateY(1px); }
+    .btn-primary:disabled { 
+      background: var(--muted); 
+      cursor: not-allowed; 
+      transform: none; 
+    }
+
+    .subtext {
+      text-align: center;
+      margin-top: var(--l);
+      font-size: 14px;
+      color: color-mix(in oklab, var(--text), #ffffff 60%);
+    }
+
+    .subtext a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .subtext a:hover {
+      text-decoration: underline;
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      color: white;
+      font-weight: 500;
+      font-size: 14px;
+      z-index: 1000;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      max-width: 300px;
+    }
+
+    .toast.show {
+      transform: translateX(0);
+    }
+
+    .toast.success {
+      background: var(--success);
+    }
+
+    .toast.error {
+      background: var(--danger);
+    }
+
+    /* Debug toggle */
+    .debug-toggle {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: var(--muted);
+      color: var(--text);
+      border: 1px solid color-mix(in oklab, var(--muted), #ffffff 8%);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      z-index: 1000;
+    }
+
+    .debug-toggle:hover {
+      background: color-mix(in oklab, var(--muted), #ffffff 4%);
+    }
+
+    #out-debug {
+      position: fixed;
+      top: 60px;
+      left: 20px;
+      right: 20px;
+      background: var(--muted);
+      color: var(--text);
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-family: monospace;
+      max-height: 200px;
+      overflow: auto;
+      z-index: 1000;
+      display: none;
+    }
+
+    #out-debug.show {
+      display: block;
+    }
+
+    /* Success state */
+    .success-state {
+      text-align: center;
+      padding: var(--xl) 0;
+    }
+
+    .success-state h2 {
+      color: var(--success);
+      margin: 0 0 var(--l);
+      font-size: 18px;
+    }
+
+    .success-state p {
+      color: color-mix(in oklab, var(--text), #ffffff 60%);
+      margin: 0 0 var(--l);
+      line-height: 1.5;
+    }
+
+    .success-state a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .success-state a:hover {
+      text-decoration: underline;
+    }
+  </style>
+
+  <!-- Konfiguration (sätter window.CONFIG), måste laddas innan supa.js används -->
+  <script src="./config.js"></script>
+</head>
+<body>
+  <!-- Debug toggle -->
+  <button class="debug-toggle" id="debug-toggle">Debug</button>
+  <pre id="out-debug"></pre>
+
+  <!-- Toast container -->
+  <div id="toast" class="toast"></div>
+
+  <div class="wrap">
+    <main class="card" role="main" aria-labelledby="title">
+      <h1 id="title" class="title">Skapa konto</h1>
+
+      <div id="signup-form">
+        <div class="field">
+          <label for="email">E-post</label>
+          <input id="email" type="email" placeholder="namn@exempel.se" autocomplete="email" required />
+        </div>
+
+        <div class="field">
+          <label for="password">Lösenord</label>
+          <input id="password" type="password" placeholder="••••••••" autocomplete="new-password" required />
+          <label style="display:inline-flex;align-items:center;gap:8px;font-size:12px;margin-top:4px;">
+            <input id="toggle-password" type="checkbox" /> Visa lösenord
+          </label>
+        </div>
+
+        <button id="btn-signup" class="btn-primary" type="button">
+          Skapa konto
+        </button>
+
+        <p class="subtext">
+          Har du redan konto? <a href="/login.html">Logga in</a>
+        </p>
+      </div>
+
+      <!-- Logged-in state (hidden by default) -->
+      <div id="logged-in-state" class="success-state" style="display: none;">
+        <h2>Du är redan inloggad</h2>
+        <p>Fortsätt till att välja roll.</p>
+        <p><a href="/role.html">Gå vidare</a></p>
+      </div>
+
+      <!-- Success state (hidden by default) -->
+      <div id="success-state" class="success-state" style="display: none;">
+        <h2>Kolla din mail</h2>
+        <p>Vi har skickat en bekräftelselänk till din e-post. Klicka på länken för att aktivera ditt konto.</p>
+        <p><a href="/verify.html">Öppna verifiering</a></p>
+      </div>
+    </main>
+  </div>
+
+  <!-- Funktionsscript (ESM) -->
+  <script type="module">
+    import supa from '../js/supa.js';
+
+    const debugEnabled = new URLSearchParams(window.location.search).has('debug');
+    if (debugEnabled) {
+      console.log('[signup] wired', { CONFIG: window.CONFIG, supa });
+    }
+
+    const $ = (id) => document.getElementById(id);
+    
+    // Debug functionality
+    if (debugEnabled) {
+      $('debug-toggle').textContent = 'Debug ON';
+      $('out-debug').classList.add('show');
+    }
+
+    // Small dev note with redirect target
+    if (debugEnabled) {
+      const note = document.createElement('p');
+      note.id = 'dev-note';
+      note.style.cssText = 'text-align:center;font-size:12px;opacity:0.75;margin-top:4px;';
+      const redirect = (window.CONFIG?.SITE_URL || location.origin) + '/verify.html';
+      note.textContent = `emailRedirectTo: ${redirect}`;
+      $('signup-form')?.appendChild(note);
+    }
+
+    function debugLog(message, data = null) {
+      if (!debugEnabled) return;
+      const timestamp = new Date().toISOString().substr(11, 12);
+      const logEntry = `[${timestamp}] ${message}${data ? '\n' + JSON.stringify(data, null, 2) : ''}\n`;
+      $('out-debug').textContent += logEntry;
+      $('out-debug').scrollTop = $('out-debug').scrollHeight;
+    }
+
+    // Toast notification
+    function showToast(message, type = 'success') {
+      const toast = $('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type}`;
+      toast.classList.add('show');
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 4000);
+    }
+
+    // Debug toggle
+    $('debug-toggle')?.addEventListener('click', () => {
+      const isVisible = $('out-debug').classList.contains('show');
+      if (isVisible) {
+        $('out-debug').classList.remove('show');
+        $('debug-toggle').textContent = 'Debug';
+      } else {
+        $('out-debug').classList.add('show');
+        $('debug-toggle').textContent = 'Debug ON';
+      }
+    });
+
+    // Prefill last email
+    const lastEmail = localStorage.getItem('auth.lastEmail');
+    if (lastEmail) {
+      $('email').value = lastEmail;
+    }
+
+    // Show/hide password
+    $('toggle-password')?.addEventListener('change', (e) => {
+      const checked = e.target.checked;
+      const pwd = $('password');
+      pwd.type = checked ? 'text' : 'password';
+    });
+
+    // On load: check session
+    (async () => {
+      const { data, error } = await supa.Auth.getSession();
+      debugLog('Session check', { hasSession: !!data, error });
+      if (data) {
+        $('signup-form').style.display = 'none';
+        $('logged-in-state').style.display = 'block';
+      }
+    })();
+
+    // Signup handler
+    async function onSignup() {
+      const emailInput = $('email');
+      const email = emailInput.value.trim();
+      const password = $('password').value;
+      
+      if (!email || !password) {
+        showToast('Fyll i e-post och lösenord', 'error');
+        return;
+      }
+
+      if (!emailInput.checkValidity()) {
+        showToast('Ogiltig e-postadress', 'error');
+        return;
+      }
+
+      if (password.length < 8) {
+        showToast('Lösenordet måste vara minst 8 tecken', 'error');
+        return;
+      }
+
+      const btn = $('btn-signup');
+      btn.disabled = true;
+      btn.textContent = 'Skapar konto...';
+
+      debugLog('Starting signup', { email: email.substring(0, 3) + '***', redirect });
+
+      let success = false;
+      try {
+        // Persist last used email early
+        try { localStorage.setItem('auth.lastEmail', email); } catch {}
+        const redirect = (window.CONFIG?.SITE_URL || location.origin) + '/verify.html';
+        const { data, error } = await supa.Auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: redirect }
+        });
+        
+        debugLog('Signup response', { data, error });
+
+        if (error) {
+          showToast(error.message, 'error');
+          return;
+        }
+
+        if (data) {
+          // Check if email confirmation is required
+          if (data.user && !data.session) {
+            // Email confirmation required
+            debugLog('Email confirmation required');
+            $('signup-form').style.display = 'none';
+            $('success-state').style.display = 'block';
+            // Clear form fields
+            $('email').value = '';
+            $('password').value = '';
+            success = true;
+          } else if (data.session) {
+            // No email confirmation required, redirect to role selection
+            debugLog('No email confirmation required, redirecting to role.html');
+            showToast('Konto skapat! Omdirigerar...', 'success');
+            success = true;
+            setTimeout(() => {
+              location.href = '/role.html';
+            }, 1500);
+          }
+        }
+      } catch (err) {
+        debugLog('Signup error', err);
+        showToast('Ett fel uppstod: ' + (err?.message || err), 'error');
+      } finally {
+        if (success) {
+          setTimeout(() => {
+            btn.disabled = false;
+            btn.textContent = 'Skapa konto';
+          }, 3000);
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'Skapa konto';
+        }
+      }
+    }
+
+    // Wire up event listeners
+    $('btn-signup')?.addEventListener('click', onSignup);
+    
+    // Allow Enter key to submit
+    $('email')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') onSignup();
+    });
+    
+    $('password')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') onSignup();
+    });
+
+    debugLog('Signup page initialized');
+  </script>
+</body>
+</html>
