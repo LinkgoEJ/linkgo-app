@@ -1,0 +1,2 @@
+# linkgo-app
+LingkoApp
