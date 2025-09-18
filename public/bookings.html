@@ -8,30 +8,83 @@
     <script src="./config.js"></script>
     <style>
         body {
-            padding: var(--l);
-            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
         }
-        .container {
-            max-width: 840px;
-            margin: 0 auto;
+        .appbar {
+            position: sticky;
+            top: 0;
+            background: var(--surface);
+            border-bottom: 1px solid var(--muted);
+            padding: var(--m) var(--l);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
         }
+        .appbar .left {
+            font-size: 1.1em;
+        }
+        .appbar .right button {
+            padding: var(--s) var(--m);
+            border: 1px solid var(--muted);
+            background: var(--surface);
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .debug-badge {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: monospace;
+            z-index: 1000;
+        }
+        .debug-badge[hidden] {
+            display: none;
+        }
+        #msg {
+            padding: var(--m);
+            margin: var(--m) var(--l);
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        .msg-error { background: #fee2e2; color: #991b1b; }
+        .msg-success { background: #d1fae5; color: #065f46; }
+        .msg-info { background: #dbeafe; color: #1e40af; }
         .card {
+            margin: var(--l);
             background: var(--surface);
             border: 1px solid var(--muted);
             border-radius: 12px;
             padding: var(--xl);
+        }
+        .tabs {
+            display: flex;
+            gap: var(--s);
             margin-bottom: var(--l);
         }
-        .section {
-            margin-bottom: var(--xxl);
+        .tabs button {
+            padding: var(--m) var(--l);
+            border: 1px solid var(--muted);
+            background: var(--muted);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
         }
-        .section h2 {
-            color: var(--primary);
-            margin-bottom: var(--l);
-            border-bottom: 1px solid var(--muted);
-            padding-bottom: var(--m);
+        .tabs button.active {
+            background: var(--primary);
+            color: var(--surface);
+            border-color: var(--primary);
         }
-        .booking-card {
+        .item {
             background: var(--muted);
             border-radius: 8px;
             padding: var(--l);
@@ -40,472 +93,211 @@
             justify-content: space-between;
             align-items: flex-start;
         }
-        .booking-info h4 {
-            margin: 0 0 var(--s) 0;
+        .meta {
+            flex: 1;
+        }
+        .meta div {
+            margin-bottom: var(--xs);
             color: var(--text);
         }
-        .booking-info p {
-            margin: 0 0 var(--s) 0;
-            color: var(--subtle);
-            font-size: 0.9em;
+        .status {
+            margin-left: var(--m);
         }
-        .booking-info .time {
-            color: var(--primary);
-            font-weight: 600;
+        .chip {
+            padding: var(--xs) var(--s);
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 500;
         }
-        .booking-actions {
+        .chip.requested { background: #fef3c7; color: #92400e; }
+        .chip.accepted { background: #d1fae5; color: #065f46; }
+        .chip.declined { background: #fee2e2; color: #991b1b; }
+        .actions {
+            margin-left: var(--m);
             display: flex;
-            gap: var(--m);
-            flex-shrink: 0;
+            gap: var(--s);
         }
-        .booking-actions button {
-            padding: var(--m) var(--l);
+        .actions button {
+            padding: var(--s) var(--m);
+            border: none;
             border-radius: 6px;
             cursor: pointer;
-            font-weight: 600;
-            border: none;
+            font-size: 0.9em;
+            font-weight: 500;
         }
-        .booking-actions button.accept {
-            background: var(--success);
-            color: var(--bg);
+        .actions button[data-act="accepted"] {
+            background: #10b981;
+            color: white;
         }
-        .booking-actions button.decline {
-            background: var(--danger);
-            color: var(--bg);
+        .actions button[data-act="declined"] {
+            background: #ef4444;
+            color: white;
         }
-        .booking-actions button:disabled {
-            background: var(--muted);
-            color: var(--subtle);
+        .actions button:disabled {
+            opacity: 0.5;
             cursor: not-allowed;
         }
-        .toast {
-            position: fixed;
-            top: var(--l);
-            right: var(--l);
-            background: var(--success);
-            color: var(--bg);
-            padding: var(--m) var(--l);
-            border-radius: 6px;
-            display: none;
-            z-index: 1000;
-        }
-        .toast.error {
-            background: var(--danger);
-        }
-        .debug {
-            background: var(--muted);
-            border-radius: 6px;
-            padding: var(--m);
+        .pager {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-top: var(--l);
-            font-family: monospace;
-            font-size: 0.8em;
-            white-space: pre-wrap;
         }
-        .error-message {
-            color: var(--danger);
-            text-align: center;
-            padding: var(--xl);
+        .pager button {
+            padding: var(--s) var(--m);
+            border: 1px solid var(--muted);
+            background: var(--surface);
+            border-radius: 6px;
+            cursor: pointer;
         }
-        .error-message a {
-            color: var(--primary);
-            text-decoration: none;
-        }
-        .error-message a:hover {
-            text-decoration: underline;
-        }
-        .empty-state {
-            text-align: center;
-            color: var(--subtle);
-            padding: var(--xl);
-            font-style: italic;
+        .pager button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>LinkGo – Mina förfrågningar</h1>
-        
-        <div class="card" id="card-content">
-            <!-- Content will be loaded here -->
+    <header id="appbar" class="appbar">
+        <div class="left">
+            <strong>LinkGo</strong> · <span>Mina förfrågningar</span>
         </div>
-        
-        <div class="toast" id="toast"></div>
-        
-        <div class="debug">
-            <div>Session: <pre id="out-session"></pre></div>
-            <div>Profile: <pre id="out-profile"></pre></div>
-            <div>Debug: <pre id="out-debug"></pre></div>
+        <div class="right">
+            <button id="btn-logout">Logga ut</button>
         </div>
-    </div>
+    </header>
+    
+    <div id="debug" class="debug-badge" hidden></div>
+    <p id="msg" role="status" aria-live="polite"></p>
+
+    <main class="card">
+        <nav class="tabs">
+            <button id="tab-incoming">Inkommande</button>
+            <button id="tab-all">Alla</button>
+        </nav>
+        <div id="list"></div>
+        <footer class="pager">
+            <button id="btn-prev">Prev</button>
+            <span id="page-info"></span>
+            <button id="btn-next">Next</button>
+        </footer>
+    </main>
 
     <script type="module">
         import supa from '../js/supa.js';
 
-        // DOM elements
-        const cardContent = document.getElementById('card-content');
-        const toast = document.getElementById('toast');
-        const outSession = document.getElementById('out-session');
-        const outProfile = document.getElementById('out-profile');
-        const outDebug = document.getElementById('out-debug');
+        const $ = (id) => document.getElementById(id);
+        const fmt = (iso) => {
+            try { return new Intl.DateTimeFormat('sv-SE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso)); }
+            catch { return iso; }
+        };
+        function setMsg(text, type='info') { const el=$('msg'); if(!el) return; el.textContent=text||''; el.className=type; }
 
-        // Helper functions
-        function set(id, val) {
-            const el = document.getElementById(id);
-            if (el) {
-                if (typeof val === 'object') {
-                    el.textContent = JSON.stringify(val, null, 2);
+        // Guard + session
+        await supa.Auth.protectPage('talent');
+        const me = await supa.Auth.getMyProfile();
+
+        // Debug-badge
+        const dbg = $('debug');
+        if (window.CONFIG?.DEBUG) {
+            dbg.hidden = false;
+            dbg.textContent = `${location.origin} • ${me?.data?.email||'okänd'} • roll:${me?.data?.role||'–'}`;
+        }
+
+        // Logout
+        $('btn-logout').addEventListener('click', async () => {
+            try { await supa.Auth.signOut(); location.href = './login.html'; }
+            catch (e) { setMsg('Kunde inte logga ut', 'error'); console.error(e); }
+        });
+
+        // Tabs + state
+        const state = {
+            tab: localStorage.getItem('bookings.tab') || 'incoming',
+            cursor: null,
+            limit: 10,
+        };
+        const tabIncoming = $('tab-incoming');
+        const tabAll = $('tab-all');
+        const list = $('list');
+        const pageInfo = $('page-info');
+
+        function selectTab(t) {
+            state.tab = t; state.cursor = null;
+            localStorage.setItem('bookings.tab', t);
+            tabIncoming.classList.toggle('active', t==='incoming');
+            tabAll.classList.toggle('active', t==='all');
+            load();
+        }
+
+        tabIncoming.addEventListener('click', () => selectTab('incoming'));
+        tabAll.addEventListener('click', () => selectTab('all'));
+
+        // Rendering
+        function rowCard(row) {
+            const start = fmt(row.start_date);
+            const end = fmt(row.end_date);
+            const disabled = row.status !== 'requested';
+            const actions = disabled ? '' : `
+                <div class="actions">
+                    <button data-act="accepted" data-id="${row.id}">Acceptera</button>
+                    <button data-act="declined" data-id="${row.id}">Avböj</button>
+                </div>`;
+            return `
+                <article class="item">
+                    <div class="meta">
+                        <div><strong>${row.manager?.full_name || row.manager_id}</strong></div>
+                        <div>${row.location || '-'}</div>
+                        <div>${start} – ${end}</div>
+                        <div>${row.message || ''}</div>
+                    </div>
+                    <div class="status"><span class="chip ${row.status}">${row.status}</span></div>
+                    ${actions}
+                </article>`;
+        }
+
+        async function load(dir) {
+            try {
+                setMsg('Laddar...', 'info');
+                let data;
+                if (state.tab === 'incoming') {
+                    data = await supa.Bookings.listIncomingForTalent({ limit: state.limit, cursor: state.cursor });
                 } else {
-                    el.textContent = val;
+                    data = await supa.Bookings.listAllForTalent({ limit: state.limit, cursor: state.cursor });
                 }
-            }
-        }
+                list.innerHTML = (data.items || []).map(rowCard).join('') || '<p>Inget att visa.</p>';
+                pageInfo.textContent = `${(data.items||[]).length} st`;
 
-        function show(el) {
-            if (typeof el === 'string') el = document.getElementById(el);
-            if (el) el.style.display = 'block';
-        }
-
-        function hide(el) {
-            if (typeof el === 'string') el = document.getElementById(el);
-            if (el) el.style.display = 'none';
-        }
-
-        function showToast(message, isError = false) {
-            toast.textContent = message;
-            toast.className = isError ? 'toast error' : 'toast';
-            show(toast);
-            setTimeout(() => hide(toast), 3000);
-        }
-
-        // Format datetime range in local time
-        function fmtRangeLocal(startTs, endTs) {
-            try {
-                const start = new Date(startTs);
-                const end = new Date(endTs);
-                
-                const startStr = start.toLocaleString('sv-SE', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                // Wire actions
+                list.querySelectorAll('button[data-id]').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const id = e.currentTarget.getAttribute('data-id');
+                        const act = e.currentTarget.getAttribute('data-act');
+                        e.currentTarget.disabled = true;
+                        try {
+                            await supa.Bookings.respond({ booking_id: id, action: act });
+                            setMsg(act === 'accepted' ? 'Förfrågan accepterad.' : 'Förfrågan avböjd.', 'success');
+                            await load(); // refresh
+                        } catch (err) {
+                            console.error(err);
+                            setMsg('Kunde inte uppdatera bokningen.', 'error');
+                        } finally {
+                            e.currentTarget.disabled = false;
+                        }
+                    });
                 });
-                
-                const endStr = end.toLocaleString('sv-SE', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-                
-                return `${startStr} - ${endStr}`;
-            } catch (error) {
-                return `${startTs} - ${endTs}`;
+
+                // Simple prev/next demo (behåll offset i list-metoderna)
+                $('btn-prev').onclick = async () => { /* valfritt: uppdatera state.cursor bakåt */ };
+                $('btn-next').onclick = async () => { /* valfritt: uppdatera state.cursor framåt */ };
+
+                setMsg('');
+            } catch (e) {
+                console.error(e);
+                setMsg('Fel vid laddning av bokningar.', 'error');
             }
         }
 
-        // Session and role guard
-        async function checkAuth() {
-            try {
-                const { data: session, error: sessionError } = await supa.Auth.getSession();
-                set('out-session', session ? JSON.stringify(session, null, 2) : 'No session');
-                
-                if (sessionError || !session) {
-                    showNotLoggedIn();
-                    return false;
-                }
-
-                const { data: me, error: profileError } = await supa.Profiles.getMyProfile();
-                set('out-profile', me ? JSON.stringify(me, null, 2) : 'No profile');
-                
-                if (profileError || !me) {
-                    showError('Kunde inte ladda profil');
-                    return false;
-                }
-
-                if (me.role !== 'talent') {
-                    showNotTalent();
-                    return false;
-                }
-
-                return { session, me };
-            } catch (error) {
-                console.error('Auth check failed:', error);
-                showError('Autentisering misslyckades');
-                return false;
-            }
-        }
-
-        function showNotLoggedIn() {
-            cardContent.innerHTML = `
-                <div class="error-message">
-                    Du är inte inloggad. <a href="login.html">Logga in på login.html</a>.
-                </div>
-            `;
-        }
-
-        function showNotTalent() {
-            cardContent.innerHTML = `
-                <div class="error-message">
-                    Endast talents har åtkomst till denna sida.
-                </div>
-            `;
-        }
-
-        function showError(message) {
-            cardContent.innerHTML = `
-                <div class="error-message">
-                    ${message}
-                </div>
-            `;
-        }
-
-        // Load incoming requests (status = 'requested')
-        async function loadIncomingRequests(talentId) {
-            try {
-                const { data, error } = await supa.client
-                    .from('bookings')
-                    .select('id, manager_id, talent_id, role_at_booking, start_ts, end_ts, location, message, status, created_at')
-                    .eq('talent_id', talentId)
-                    .eq('status', 'requested')
-                    .order('created_at', { ascending: false })
-                    .limit(50);
-
-                if (error) throw error;
-                return data || [];
-            } catch (error) {
-                console.error('Failed to load incoming requests:', error);
-                showToast(`Kunde inte ladda inkommande förfrågningar: ${error.message}`, true);
-                return [];
-            }
-        }
-
-        // Load upcoming bookings (status = 'accepted' or 'confirmed', future start_ts)
-        async function loadUpcomingBookings(talentId) {
-            try {
-                const now = new Date().toISOString();
-                
-                const { data, error } = await supa.client
-                    .from('bookings')
-                    .select('id, manager_id, talent_id, role_at_booking, start_ts, end_ts, location, message, status, created_at')
-                    .eq('talent_id', talentId)
-                    .in('status', ['accepted', 'confirmed'])
-                    .gte('start_ts', now)
-                    .order('start_ts', { ascending: true })
-                    .limit(50);
-
-                if (error) throw error;
-                return data || [];
-            } catch (error) {
-                console.error('Failed to load upcoming bookings:', error);
-                showToast(`Kunde inte ladda kommande bokningar: ${error.message}`, true);
-                return [];
-            }
-        }
-
-        // Get manager name (best-effort lookup)
-        async function getManagerName(managerId) {
-            try {
-                const { data, error } = await supa.client
-                    .from('profiles')
-                    .select('full_name')
-                    .eq('id', managerId)
-                    .single();
-                
-                if (error || !data) return managerId;
-                return data.full_name || managerId;
-            } catch (error) {
-                return managerId;
-            }
-        }
-
-        // Respond to booking (accept/decline)
-        async function respondToBooking(bookingId, action, talentId) {
-            try {
-                const { data, error } = await supa.client
-                    .from('bookings')
-                    .update({ 
-                        status: action === 'accept' ? 'accepted' : 'declined'
-                    })
-                    .eq('id', bookingId)
-                    .eq('talent_id', talentId)
-                    .select()
-                    .single();
-
-                if (error) throw error;
-                return data;
-            } catch (error) {
-                console.error('Failed to respond to booking:', error);
-                throw error;
-            }
-        }
-
-        // Render incoming requests section
-        async function renderIncomingRequests(requests) {
-            if (requests.length === 0) {
-                return `
-                    <div class="section">
-                        <h2>Inkommande (requested)</h2>
-                        <div class="empty-state">Inga inkommande förfrågningar</div>
-                    </div>
-                `;
-            }
-
-            const requestsHtml = await Promise.all(requests.map(async (booking) => {
-                const managerName = await getManagerName(booking.manager_id);
-                return `
-                    <div class="booking-card" data-booking-id="${booking.id}">
-                        <div class="booking-info">
-                            <h4>Från: ${managerName}</h4>
-                            <p class="time">${fmtRangeLocal(booking.start_ts, booking.end_ts)}</p>
-                            <p>Roll: ${booking.role_at_booking}</p>
-                            ${booking.location ? `<p>Plats: ${booking.location}</p>` : ''}
-                            ${booking.message ? `<p>Meddelande: ${booking.message}</p>` : ''}
-                        </div>
-                        <div class="booking-actions">
-                            <button class="accept" onclick="handleAccept('${booking.id}')">Acceptera</button>
-                            <button class="decline" onclick="handleDecline('${booking.id}')">Avvisa</button>
-                        </div>
-                    </div>
-                `;
-            }));
-
-            return `
-                <div class="section">
-                    <h2>Inkommande (requested)</h2>
-                    ${requestsHtml.join('')}
-                </div>
-            `;
-        }
-
-        // Render upcoming bookings section
-        async function renderUpcomingBookings(bookings) {
-            if (bookings.length === 0) {
-                return `
-                    <div class="section">
-                        <h2>Kommande (accepted/confirmed)</h2>
-                        <div class="empty-state">Inga kommande bokningar</div>
-                    </div>
-                `;
-            }
-
-            const bookingsHtml = await Promise.all(bookings.map(async (booking) => {
-                const managerName = await getManagerName(booking.manager_id);
-                return `
-                    <div class="booking-card">
-                        <div class="booking-info">
-                            <h4>Från: ${managerName}</h4>
-                            <p class="time">${fmtRangeLocal(booking.start_ts, booking.end_ts)}</p>
-                            <p>Roll: ${booking.role_at_booking} • Status: ${booking.status}</p>
-                            ${booking.location ? `<p>Plats: ${booking.location}</p>` : ''}
-                            ${booking.message ? `<p>Meddelande: ${booking.message}</p>` : ''}
-                        </div>
-                    </div>
-                `;
-            }));
-
-            return `
-                <div class="section">
-                    <h2>Kommande (accepted/confirmed)</h2>
-                    ${bookingsHtml.join('')}
-                </div>
-            `;
-        }
-
-        // Handle accept action
-        async function handleAccept(bookingId) {
-            const talentId = window.currentTalentId;
-            if (!talentId) {
-                showToast('Session fel', true);
-                return;
-            }
-
-            try {
-                await respondToBooking(bookingId, 'accept', talentId);
-                showToast('Förfrågan accepterad');
-                
-                // Disable buttons for this booking
-                const card = document.querySelector(`[data-booking-id="${bookingId}"]`);
-                if (card) {
-                    const buttons = card.querySelectorAll('button');
-                    buttons.forEach(btn => btn.disabled = true);
-                }
-                
-                // Reload data
-                await loadAndRenderBookings();
-            } catch (error) {
-                showToast(`Kunde inte acceptera: ${error.message}`, true);
-            }
-        }
-
-        // Handle decline action
-        async function handleDecline(bookingId) {
-            const talentId = window.currentTalentId;
-            if (!talentId) {
-                showToast('Session fel', true);
-                return;
-            }
-
-            try {
-                await respondToBooking(bookingId, 'decline', talentId);
-                showToast('Förfrågan avvisad');
-                
-                // Disable buttons for this booking
-                const card = document.querySelector(`[data-booking-id="${bookingId}"]`);
-                if (card) {
-                    const buttons = card.querySelectorAll('button');
-                    buttons.forEach(btn => btn.disabled = true);
-                }
-                
-                // Reload data
-                await loadAndRenderBookings();
-            } catch (error) {
-                showToast(`Kunde inte avvisa: ${error.message}`, true);
-            }
-        }
-
-        // Load and render all bookings
-        async function loadAndRenderBookings() {
-            const talentId = window.currentTalentId;
-            if (!talentId) return;
-
-            set('out-debug', 'Loading bookings...');
-
-            try {
-                const [incomingRequests, upcomingBookings] = await Promise.all([
-                    loadIncomingRequests(talentId),
-                    loadUpcomingBookings(talentId)
-                ]);
-
-                set('out-debug', `Loaded ${incomingRequests.length} incoming, ${upcomingBookings.length} upcoming`);
-
-                const [incomingHtml, upcomingHtml] = await Promise.all([
-                    renderIncomingRequests(incomingRequests),
-                    renderUpcomingBookings(upcomingBookings)
-                ]);
-
-                cardContent.innerHTML = incomingHtml + upcomingHtml;
-            } catch (error) {
-                console.error('Failed to load bookings:', error);
-                showToast(`Kunde inte ladda bokningar: ${error.message}`, true);
-            }
-        }
-
-        // Initialize the application
-        async function init() {
-            const authResult = await checkAuth();
-            if (!authResult) return;
-
-            const { session, me } = authResult;
-            window.currentTalentId = session.user.id;
-            
-            await loadAndRenderBookings();
-        }
-
-        // Make functions globally available for onclick handlers
-        window.handleAccept = handleAccept;
-        window.handleDecline = handleDecline;
-
-        // Start the application
-        init();
+        // Init
+        selectTab(state.tab);
     </script>
 </body>
 </html>

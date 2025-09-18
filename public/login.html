@@ -2,765 +2,190 @@
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
-  <title>LinkGo – Logga in</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- Design tokens (colors, spacing, radii, etc.) -->
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Logga in – LinkGo</title>
   <link rel="stylesheet" href="./tokens.css" />
-
+  <script src="./config.js"></script>
   <style>
-    :root {
-      --surface: var(--bg, #0b0b0c);
-      --text: var(--fg, #e7e7ea);
-      --muted: var(--muted-600, #1a1b1e);
-      --primary: var(--accent, #3b82f6);
-      --success: var(--success, #10b981);
-      --danger: var(--danger, #ef4444);
-      --m: var(--space-4, 12px);
-      --l: var(--space-6, 16px);
-      --xl: var(--space-8, 24px);
-      --radius: var(--radius-lg, 16px);
-      --shadow: 0 8px 24px rgba(0,0,0,0.25);
-      --border: 1px solid color-mix(in oklab, var(--muted), #ffffff 6%);
-    }
-
-    html, body {
-      height: 100%;
-      background: color-mix(in oklab, var(--surface), #000 6%);
-      color: var(--text);
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, sans-serif;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-
-    .session-banner {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      background: color-mix(in oklab, var(--primary), transparent 90%);
-      border-bottom: 1px solid color-mix(in oklab, var(--primary), #ffffff 20%);
-      padding: 12px 20px;
-      display: none;
-      align-items: center;
-      justify-content: space-between;
-      z-index: 1000;
-    }
-
-    .session-banner.show {
-      display: flex;
-    }
-
-    .session-info {
-      display: flex;
-      align-items: center;
-      gap: var(--m);
-      font-size: 14px;
-    }
-
-    .session-email {
-      font-weight: 600;
+    body {
+      margin: 0;
+      padding: var(--l);
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
       color: var(--text);
     }
-
-    .session-role {
-      color: color-mix(in oklab, var(--text), #ffffff 60%);
-      font-size: 12px;
+    .container {
+      max-width: 400px;
+      margin: 0 auto;
+      padding-top: var(--xxl);
     }
-
-    .session-logout {
-      appearance: none;
-      border: 1px solid color-mix(in oklab, var(--primary), #ffffff 30%);
-      background: transparent;
-      color: var(--text);
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all .15s ease;
-    }
-
-    .session-logout:hover {
-      background: color-mix(in oklab, var(--primary), #ffffff 20%);
-    }
-
-    .wrap {
-      min-height: 100%;
-      display: grid;
-      place-items: center;
-      padding: 32px 16px;
-    }
-
     .card {
-      width: 100%;
-      max-width: 420px;
-      margin: 60px auto;
-      padding: 24px;
-      border-radius: var(--radius);
       background: var(--surface);
-      border: var(--border);
-      box-shadow: var(--shadow);
+      border: 1px solid var(--muted);
+      border-radius: 12px;
+      padding: var(--xl);
     }
-
-    .title {
-      margin: 0 0 var(--xl);
-      font-weight: 650;
-      font-size: 22px;
-      letter-spacing: -0.01em;
-      text-align: center;
-    }
-
-    .field {
-      display: grid;
-      gap: 6px;
+    .form-group {
       margin-bottom: var(--l);
     }
-
     label {
-      font-size: 12px;
-      color: color-mix(in oklab, var(--text), #ffffff 60%);
+      display: block;
+      margin-bottom: var(--s);
       font-weight: 500;
     }
-
-    .input-group {
-      position: relative;
-    }
-
-    input[type="email"],
-    input[type="password"] {
+    input {
       width: 100%;
-      padding: 12px 14px;
-      padding-right: 40px;
-      border-radius: 12px;
-      background: color-mix(in oklab, var(--surface), #ffffff 4%);
-      border: 1px solid color-mix(in oklab, var(--muted), #ffffff 8%);
-      color: var(--text);
-      outline: none;
-      transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
-      font-size: 14px;
+      padding: var(--m);
+      border: 1px solid var(--muted);
+      border-radius: 6px;
+      font-size: 16px;
+      box-sizing: border-box;
     }
-
-    input::placeholder { color: color-mix(in oklab, var(--text), #ffffff 70%); }
-
     input:focus {
-      border-color: color-mix(in oklab, var(--primary), #ffffff 10%);
-      box-shadow: 0 0 0 6px color-mix(in oklab, var(--primary), transparent 85%);
-      background: color-mix(in oklab, var(--surface), #ffffff 6%);
-    }
-
-    .password-toggle {
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: color-mix(in oklab, var(--text), #ffffff 60%);
-      cursor: pointer;
-      padding: 4px;
-      font-size: 12px;
-      transition: color .15s ease;
-    }
-
-    .password-toggle:hover {
-      color: var(--text);
-    }
-
-    .btn-primary {
-      appearance: none;
-      border: none;
-      background: var(--primary);
-      color: white;
-      padding: 12px 24px;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: 14px;
-      cursor: pointer;
-      transition: background .15s ease, transform .02s ease;
-      width: 100%;
-      margin: var(--l) 0;
-    }
-
-    .btn-primary:hover,
-    .btn-primary:focus-visible {
-      background: color-mix(in oklab, var(--primary), #ffffff 10%);
       outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.2);
     }
-
-    .btn-primary:active { transform: translateY(1px); }
-    .btn-primary:disabled { 
-      background: var(--muted); 
-      cursor: not-allowed; 
-      transform: none; 
-    }
-
-    .btn-secondary {
-      appearance: none;
-      border: 1px solid color-mix(in oklab, var(--muted), #ffffff 8%);
-      background: color-mix(in oklab, var(--surface), #ffffff 4%);
-      color: var(--text);
-      padding: 10px 16px;
-      border-radius: 8px;
+    button {
+      width: 100%;
+      padding: var(--m);
+      background: var(--primary);
+      color: var(--surface);
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
       font-weight: 500;
-      font-size: 13px;
       cursor: pointer;
-      transition: all .15s ease;
-      margin: 0 var(--m) var(--m) 0;
+      margin-bottom: var(--m);
     }
-
-    .btn-secondary:hover {
-      border-color: color-mix(in oklab, var(--primary), #ffffff 10%);
-      background: color-mix(in oklab, var(--primary), transparent 85%);
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
-
-    .btn-secondary:active { transform: translateY(1px); }
-
-    .links {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--m);
-      margin: var(--l) 0;
-      justify-content: center;
+    button:hover:not(:disabled) {
+      opacity: 0.9;
     }
-
-    .links a {
+    .link {
+      display: block;
+      text-align: center;
       color: var(--primary);
       text-decoration: none;
-      font-size: 13px;
-      font-weight: 500;
-      transition: color .15s ease;
+      margin-top: var(--m);
     }
-
-    .links a:hover {
-      color: color-mix(in oklab, var(--primary), #ffffff 20%);
+    .link:hover {
       text-decoration: underline;
     }
-
-    .logged-in-card {
-      background: color-mix(in oklab, var(--success), transparent 90%);
-      border: 1px solid color-mix(in oklab, var(--success), #ffffff 20%);
-      border-radius: 12px;
-      padding: var(--l);
-      margin: var(--l) 0;
+    .note {
       text-align: center;
+      margin-top: var(--l);
+      color: var(--subtle);
     }
-
-    .logged-in-title {
-      color: var(--success);
-      font-weight: 600;
-      font-size: 16px;
-      margin: 0 0 var(--m);
-    }
-
-    .logged-in-text {
-      color: color-mix(in oklab, var(--text), #ffffff 60%);
-      font-size: 14px;
-      margin: 0 0 var(--l);
-    }
-
-    .cta-button {
-      appearance: none;
-      border: none;
-      background: var(--success);
-      color: white;
-      padding: 10px 20px;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 14px;
-      cursor: pointer;
-      transition: background .15s ease, transform .02s ease;
-      text-decoration: none;
-      display: inline-block;
-    }
-
-    .cta-button:hover {
-      background: color-mix(in oklab, var(--success), #ffffff 10%);
-    }
-
-    .cta-button:active { transform: translateY(1px); }
-
-    .info-card {
-      background: color-mix(in oklab, var(--muted), #000 0%);
-      border: 1px solid color-mix(in oklab, var(--muted), #ffffff 6%);
-      border-radius: 12px;
-      padding: var(--l);
-      margin: var(--l) 0;
-      display: none;
-    }
-
-    .info-card.show {
-      display: block;
-    }
-
-    .info-title {
-      font-weight: 600;
-      font-size: 14px;
-      margin: 0 0 var(--m);
+    .note a {
       color: var(--primary);
+      text-decoration: none;
     }
-
-    .info-item {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 6px;
-      font-size: 13px;
+    .note a:hover {
+      text-decoration: underline;
     }
-
-    .info-label {
-      color: color-mix(in oklab, var(--text), #ffffff 60%);
-    }
-
-    .info-value {
-      color: var(--text);
-      font-weight: 500;
-    }
-
-    /* Toast notification */
-    .toast {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 12px 16px;
-      border-radius: 8px;
-      color: white;
-      font-weight: 500;
-      font-size: 14px;
-      z-index: 1000;
-      transform: translateX(100%);
-      transition: transform 0.3s ease;
-      max-width: 300px;
-    }
-
-    .toast.show {
-      transform: translateX(0);
-    }
-
-    .toast.success {
-      background: var(--success);
-    }
-
-    .toast.error {
-      background: var(--danger);
-    }
-
-    /* Debug toggle */
-    .debug-toggle {
-      position: fixed;
-      top: 20px;
-      left: 20px;
-      background: var(--muted);
-      color: var(--text);
-      border: 1px solid color-mix(in oklab, var(--muted), #ffffff 8%);
-      padding: 8px 12px;
+    #msg {
+      padding: var(--m);
       border-radius: 6px;
-      font-size: 12px;
-      cursor: pointer;
-      z-index: 1000;
+      margin-top: var(--m);
+      font-weight: 500;
     }
-
-    .debug-toggle:hover {
-      background: color-mix(in oklab, var(--muted), #ffffff 4%);
+    .msg-error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
     }
-
-    #out-debug {
-      position: fixed;
-      top: 60px;
-      left: 20px;
-      right: 20px;
-      background: var(--muted);
-      color: var(--text);
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 11px;
-      font-family: monospace;
-      max-height: 200px;
-      overflow: auto;
-      z-index: 1000;
-      display: none;
+    .msg-success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
     }
-
-    #out-debug.show {
-      display: block;
+    .msg-info {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
     }
   </style>
-
-  <!-- Konfiguration (sätter window.CONFIG), måste laddas innan supa.js används -->
-  <script src="./config.js"></script>
 </head>
 <body>
-  <!-- Session banner -->
-  <div id="session-banner" class="session-banner">
-    <div class="session-info" id="session-auth" style="display:none;">
-      <span class="session-email" id="session-email">—</span>
-      <span class="session-role" id="session-role">—</span>
-    </div>
-    <div class="session-info" id="session-guest" style="display:none; gap: 8px;">
-      <span>Inte inloggad</span>
-      <a href="./signup.html" style="color: var(--primary); text-decoration: none;">Skapa konto</a>
-      <a href="./verify.html" style="color: var(--primary); text-decoration: none;">Verifiera</a>
-    </div>
-    <button id="session-logout" class="session-logout" style="display:none;">Logga ut</button>
-  </div>
-
-  <!-- Debug toggle -->
-  <button class="debug-toggle" id="debug-toggle">Debug</button>
-  <pre id="out-debug"></pre>
-
-  <!-- Toast container -->
-  <div id="toast" class="toast"></div>
-
-  <div class="wrap">
-    <main class="card" role="main" aria-labelledby="title">
-      <h1 id="title" class="title">Logga in</h1>
-
-      <!-- Login form -->
-      <div id="login-form">
-        <div class="field">
+  <div class="container">
+    <div class="card">
+      <h1 style="text-align: center; margin-bottom: var(--xl);">Logga in</h1>
+      
+      <form>
+        <div class="form-group">
           <label for="email">E-post</label>
-          <input id="email" type="email" placeholder="namn@exempel.se" autocomplete="email" />
+          <input id="email" type="email" autocomplete="email" placeholder="du@example.com" required />
         </div>
 
-        <div class="field">
+        <div class="form-group">
           <label for="password">Lösenord</label>
-          <div class="input-group">
-            <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
-          </div>
-          <label style="display:inline-flex;align-items:center;gap:8px;font-size:12px;margin-top:4px;">
-            <input id="toggle-password" type="checkbox" /> Visa lösenord
-          </label>
+          <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
         </div>
 
-        <button id="btn-login" class="btn-primary" type="button">
-          Logga in
-        </button>
+        <button type="submit">Logga in</button>
+        <a href="./signup.html" class="link">Skapa konto</a>
 
-        <div class="links">
-          <a href="./signup.html">Skapa konto</a>
-          <a href="./role.html">Välj roll</a>
-        </div>
-
-        <div style="display: flex; gap: var(--m); flex-wrap: wrap; justify-content: center;">
-          <button id="btn-logout" class="btn-secondary" type="button">Logga ut</button>
-          <button id="btn-whoami" class="btn-secondary" type="button">Vem är jag?</button>
-        </div>
-      </div>
-
-      <!-- Logged in state -->
-      <div id="logged-in-card" class="logged-in-card" style="display: none;">
-        <div class="logged-in-title">Du är inloggad</div>
-        <div class="logged-in-text" id="logged-in-text">Välkommen tillbaka!</div>
-        <a id="cta-button" class="cta-button" href="#" style="display: none;">
-          Fortsätt
-        </a>
-      </div>
-
-      <!-- Info card -->
-      <div id="info-card" class="info-card">
-        <div class="info-title">Din information</div>
-        <div class="info-item">
-          <span class="info-label">E-post:</span>
-          <span class="info-value" id="info-email">—</span>
-        </div>
-        <div class="info-item">
-          <span class="info-label">Roll:</span>
-          <span class="info-value" id="info-role">—</span>
-        </div>
-        <div class="info-item">
-          <span class="info-label">Användar-ID:</span>
-          <span class="info-value" id="info-userid">—</span>
-        </div>
-      </div>
-    </main>
+        <p class="note">Behöver du verifiera e-post? <a href="./verify.html">Öppna verifiering</a></p>
+        <p id="msg" role="status" aria-live="polite"></p>
+      </form>
+    </div>
   </div>
 
   <script type="module">
     import supa from '../js/supa.js';
 
-    const debugEnabled = new URLSearchParams(window.location.search).has('debug');
-    if (debugEnabled) {
-      console.log('[login] wired', { CONFIG: window.CONFIG, supa });
-    }
+    const $ = (sel, root=document) => root.querySelector(sel);
 
-    const $ = (id) => document.getElementById(id);
-    
-    // Debug functionality
-    if (debugEnabled) {
-      $('debug-toggle').textContent = 'Debug ON';
-      $('out-debug').classList.add('show');
+    // 1) Skapa/återanvänd ett meddelandefält utan att störa design
+    let msg = $('#msg');
+    if (!msg) {
+      msg = document.createElement('p');
+      msg.id = 'msg';
+      msg.style.marginTop = '8px';
+      msg.style.minHeight = '1.2em';
+      const host = document.querySelector('form') || document.body;
+      host.appendChild(msg);
     }
+    const setMsg = (t, cls='') => { msg.textContent = t || ''; msg.className = cls; };
 
-    function debugLog(message, data = null) {
-      if (!debugEnabled) return;
-      const timestamp = new Date().toISOString().substr(11, 12);
-      const logEntry = `[${timestamp}] ${message}${data ? '\n' + JSON.stringify(data, null, 2) : ''}\n`;
-      $('out-debug').textContent += logEntry;
-      $('out-debug').scrollTop = $('out-debug').scrollHeight;
-    }
+    // 2) Hitta inputs och knappar utan att ändra DOM-struktur
+    const form = document.querySelector('form') || document;
+    const emailEl = $('#email', form);
+    const passEl  = $('#password', form);
+    const btn     = $('#btn-login', form) || form.querySelector('button[type="submit"]') || form.querySelector('button');
 
-    // Toast notification
-    function toast(message, type = 'success') {
-      const toastEl = $('toast');
-      toastEl.textContent = message;
-      toastEl.className = `toast ${type}`;
-      toastEl.classList.add('show');
-      
-      setTimeout(() => {
-        toastEl.classList.remove('show');
-      }, 4000);
-    }
-
-    // Local storage helpers
-    function saveLastEmail(email) {
+    // 3) Säker bindning – vi rör inga klasser/stilar
+    const onSubmit = async (e) => {
+      if (e) e.preventDefault();               // ingen sidladdning → fält rensas inte
+      if (btn) btn.disabled = true;
+      setMsg('Loggar in…', 'info');
+      const email = emailEl?.value?.trim();
+      const password = passEl?.value || '';
       try {
-        localStorage.setItem('auth.lastEmail', email);
-      } catch (e) {
-        debugLog('Failed to save email to localStorage', e);
-      }
-    }
-
-    function loadLastEmail() {
-      try {
-        return localStorage.getItem('auth.lastEmail') || localStorage.getItem('linkgo_last_email') || '';
-      } catch (e) {
-        debugLog('Failed to load email from localStorage', e);
-        return '';
-      }
-    }
-
-    // UI helpers
-    function setSummary(profile) {
-      if (!profile) return;
-      
-      $('info-email').textContent = profile.email || '—';
-      $('info-role').textContent = profile.role || 'Inte satt';
-      $('info-userid').textContent = profile.id ? profile.id.substring(0, 8) + '...' : '—';
-    }
-
-    function renderSessionBar(session, profile) {
-      const banner = $('session-banner');
-      const auth = $('session-auth');
-      const guest = $('session-guest');
-      const logoutBtn = $('session-logout');
-
-      if (!session || !session.user) {
-        $('session-email').textContent = '';
-        $('session-role').textContent = '';
-        auth.style.display = 'none';
-        logoutBtn.style.display = 'none';
-        guest.style.display = 'flex';
-        banner.classList.add('show');
-        return;
-      }
-
-      $('session-email').textContent = session.user.email || '—';
-      $('session-role').textContent = profile?.role ? `• roll: ${profile.role}` : '• roll: Inte satt';
-      guest.style.display = 'none';
-      auth.style.display = 'flex';
-      logoutBtn.style.display = 'inline-block';
-      banner.classList.add('show');
-    }
-
-    function showLoggedInState(profile) {
-      $('login-form').style.display = 'none';
-      $('logged-in-card').style.display = 'block';
-      
-      const ctaButton = $('cta-button');
-      const loggedInText = $('logged-in-text');
-      
-      if (!profile || !profile.role) {
-        loggedInText.textContent = 'Välj din roll för att komma igång.';
-        ctaButton.textContent = 'Välj roll';
-        ctaButton.href = './role.html';
-        ctaButton.style.display = 'inline-block';
-      } else if (profile.role === 'manager') {
-        loggedInText.textContent = 'Du är inloggad som manager. Bläddra i katalogen för att hitta talanger.';
-        ctaButton.textContent = 'Gå till katalog';
-        ctaButton.href = './browse.html';
-        ctaButton.style.display = 'inline-block';
-      } else if (profile.role === 'talent') {
-        loggedInText.textContent = 'Du är inloggad som talent. Hantera dina förfrågningar.';
-        ctaButton.textContent = 'Gå till mina förfrågningar';
-        ctaButton.href = './bookings.html';
-        ctaButton.style.display = 'inline-block';
-      }
-    }
-
-    function showLoginForm() {
-      $('login-form').style.display = 'block';
-      $('logged-in-card').style.display = 'none';
-      $('info-card').classList.remove('show');
-    }
-
-    let currentSession = null;
-    let currentProfile = null;
-
-    // Check auth state and load profile
-    async function checkAuthState() {
-      debugLog('Checking auth state...');
-      
-      try {
-        const { data: session, error } = await supa.Auth.getSession();
-        
-        debugLog('Session check result', { session, error });
-
-        if (error || !session || !session.user) {
-          debugLog('No valid session found');
-          renderSessionBar(null, null);
-          showLoginForm();
-          return;
-        }
-
-        currentSession = session;
-        debugLog('User found', { userId: session.user.id, email: session.user.email });
-
-        // Load profile
-        const { data: profile, error: profileError } = await supa.Profiles.getMyProfile();
-        
-        debugLog('Profile load result', { profile, profileError });
-
-        if (profileError) {
-          debugLog('Profile load error', profileError);
-          toast('Fel vid laddning av profil: ' + profileError.message, 'error');
-        }
-
-        currentProfile = profile;
-        
-        // Update UI
-        renderSessionBar(session, profile);
-        if (profile) {
-          showLoggedInState(profile);
-        } else {
-          showLoginForm();
-        }
-      } catch (err) {
-        debugLog('Auth check failed', err);
-        showLoginForm();
-      }
-    }
-
-    // Login handler
-    async function onLogin() {
-      const email = $('email').value.trim();
-      const password = $('password').value;
-      
-      if (!email || !password) {
-        toast('Fyll i e-post och lösenord', 'error');
-        return;
-      }
-
-      const btn = $('btn-login');
-      btn.disabled = true;
-      btn.textContent = 'Loggar in...';
-
-      debugLog('Attempting login', { email: email.substring(0, 3) + '***' });
-
-      try {
-        const { data, error } = await supa.Auth.signInWithPassword({ email, password });
-        
-        debugLog('Login result', { data, error });
-
+        const { session, error } = await supa.Auth.signInWithPassword({ email, password });
         if (error) {
-          toast('Inloggning misslyckades: ' + error.message, 'error');
-          btn.disabled = false;
-          btn.textContent = 'Logga in';
-          return;
+          const code = error.code || '';
+          if (code === 'invalid_credentials') setMsg('Fel e-post eller lösenord.', 'error');
+          else if (/confirm|verified|not[_\s-]*confirmed/i.test(error.message)) setMsg('Bekräfta din e-post via länken vi skickat.', 'error');
+          else setMsg(error.message || 'Kunde inte logga in.', 'error');
+          return; // behåll inmatade värden
         }
-
-        // Save email to localStorage
-        saveLastEmail(email);
-        
-        // Reload auth state
-        await checkAuthState();
-        toast('Inloggning lyckades!', 'success');
+        if (session) { supa.Auth.redirectToHome(); return; }
+        setMsg('Oväntat läge – prova igen.', 'error');
       } catch (err) {
-        debugLog('Login error', err);
-        toast('Ett fel uppstod: ' + (err?.message || err), 'error');
-        btn.disabled = false;
-        btn.textContent = 'Logga in';
+        console.error(err); setMsg('Tekniskt fel vid inloggning.', 'error');
+      } finally {
+        if (btn) btn.disabled = false;
       }
-    }
+    };
 
-    // Logout handler
-    async function onLogout() {
-      debugLog('Logging out...');
-      
-      try {
-        const { error } = await supa.Auth.signOut();
-        
-        if (error) {
-          debugLog('Logout error', error);
-          toast('Fel vid utloggning: ' + error.message, 'error');
-          return;
-        }
-
-        toast('Utloggning lyckades!', 'success');
-        location.reload();
-      } catch (err) {
-        debugLog('Logout error', err);
-        toast('Ett fel uppstod: ' + (err?.message || err), 'error');
-      }
-    }
-
-    // Who am I handler
-    async function onWhoAmI() {
-      if (!currentSession || !currentSession.user) {
-        toast('Du är inte inloggad', 'error');
-        return;
-      }
-
-      debugLog('Showing user info');
-      
-      const profile = currentProfile || { 
-        email: currentSession.user.email,
-        role: 'Inte satt',
-        id: currentSession.user.id
-      };
-      
-      setSummary(profile);
-      $('info-card').classList.add('show');
-    }
-
-    // Password toggle
-    function togglePasswordCheckbox(e) {
-      const passwordInput = $('password');
-      passwordInput.type = e.target.checked ? 'text' : 'password';
-    }
-
-    // Debug toggle
-    $('debug-toggle')?.addEventListener('click', () => {
-      const isVisible = $('out-debug').classList.contains('show');
-      if (isVisible) {
-        $('out-debug').classList.remove('show');
-        $('debug-toggle').textContent = 'Debug';
-      } else {
-        $('out-debug').classList.add('show');
-        $('debug-toggle').textContent = 'Debug ON';
-      }
-    });
-
-    // Wire up event listeners
-    $('btn-login')?.addEventListener('click', onLogin);
-    $('btn-logout')?.addEventListener('click', onLogout);
-    $('btn-whoami')?.addEventListener('click', onWhoAmI);
-    $('session-logout')?.addEventListener('click', onLogout);
-    $('toggle-password')?.addEventListener('change', togglePasswordCheckbox);
-    
-    // Allow Enter key to login
-    $('email')?.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') onLogin();
-    });
-    
-    $('password')?.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') onLogin();
-    });
-
-    // Load last email on page load
-    $('email').value = loadLastEmail();
-
-    // Run auth check on page load
-    debugLog('Page initialized, checking auth state...');
-    checkAuthState();
+    // 4) Bind både knapp och form – utan att ändra deras typ/utseende
+    if (btn) btn.addEventListener('click', onSubmit);
+    if (form && form.tagName === 'FORM') form.addEventListener('submit', onSubmit);
   </script>
 </body>
 </html>

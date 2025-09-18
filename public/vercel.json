@@ -1,8 +1,4 @@
 {
-  "version": 2,
-  "routes": [
-    { "src": "^/public/(.*)$", "dest": "/$1" },
-    { "src": "^(.*)$", "dest": "/public$1" }
-  ]
+  "version": 2
 }
   

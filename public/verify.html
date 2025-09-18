@@ -2,384 +2,51 @@
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
-  <title>LinkGo – E-post bekräftad</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- Design tokens (colors, spacing, radii, etc.) -->
-  <link rel="stylesheet" href="./tokens.css" />
-
-  <style>
-    :root {
-      --surface: var(--bg, #0b0b0c);
-      --text: var(--fg, #e7e7ea);
-      --muted: var(--muted-600, #1a1b1e);
-      --primary: var(--accent, #3b82f6);
-      --success: var(--success, #10b981);
-      --danger: var(--danger, #ef4444);
-      --m: var(--space-4, 12px);
-      --l: var(--space-6, 16px);
-      --xl: var(--space-8, 24px);
-      --radius: var(--radius-lg, 16px);
-      --shadow: 0 8px 24px rgba(0,0,0,0.25);
-      --border: 1px solid color-mix(in oklab, var(--muted), #ffffff 6%);
-    }
-
-    html, body {
-      height: 100%;
-      background: color-mix(in oklab, var(--surface), #000 6%);
-      color: var(--text);
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, sans-serif;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-
-    .wrap {
-      min-height: 100%;
-      display: grid;
-      place-items: center;
-      padding: 32px 16px;
-    }
-
-    .card {
-      width: 100%;
-      max-width: 420px;
-      margin: 60px auto;
-      padding: 24px;
-      border-radius: var(--radius);
-      background: var(--surface);
-      border: var(--border);
-      box-shadow: var(--shadow);
-      text-align: center;
-    }
-
-    .title {
-      margin: 0 0 var(--xl);
-      font-weight: 650;
-      font-size: 22px;
-      letter-spacing: -0.01em;
-    }
-
-    .title.verifying {
-      color: var(--primary);
-    }
-
-    .title.success {
-      color: var(--success);
-    }
-
-    .title.error {
-      color: var(--danger);
-    }
-
-    .message {
-      color: color-mix(in oklab, var(--text), #ffffff 60%);
-      margin: 0 0 var(--xl);
-      line-height: 1.5;
-    }
-
-    .btn-primary {
-      appearance: none;
-      border: none;
-      background: var(--primary);
-      color: white;
-      padding: 12px 24px;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: 14px;
-      cursor: pointer;
-      transition: background .15s ease, transform .02s ease;
-      text-decoration: none;
-      display: inline-block;
-      margin: 0 var(--m) var(--m) 0;
-    }
-
-    .btn-primary:hover {
-      background: color-mix(in oklab, var(--primary), #ffffff 10%);
-    }
-
-    .btn-primary:active { transform: translateY(1px); }
-
-    .btn-secondary {
-      appearance: none;
-      border: 1px solid color-mix(in oklab, var(--muted), #ffffff 8%);
-      background: color-mix(in oklab, var(--surface), #ffffff 4%);
-      color: var(--text);
-      padding: 12px 24px;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: 14px;
-      cursor: pointer;
-      transition: background .15s ease, border-color .15s ease, transform .02s ease;
-      text-decoration: none;
-      display: inline-block;
-      margin: 0 var(--m) var(--m) 0;
-    }
-
-    .btn-secondary:hover {
-      border-color: color-mix(in oklab, var(--primary), #ffffff 10%);
-      background: color-mix(in oklab, var(--primary), transparent 85%);
-    }
-
-    .btn-secondary:active { transform: translateY(1px); }
-
-    /* Toast */
-    .toast {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 12px 16px;
-      border-radius: 8px;
-      color: white;
-      font-weight: 500;
-      font-size: 14px;
-      z-index: 1000;
-      transform: translateX(100%);
-      transition: transform 0.3s ease;
-      max-width: 300px;
-    }
-
-    .toast.show { transform: translateX(0); }
-    .toast.success { background: var(--success); }
-    .toast.error { background: var(--danger); }
-
-    /* Debug toggle */
-    .debug-toggle {
-      position: fixed;
-      top: 20px;
-      left: 20px;
-      background: var(--muted);
-      color: var(--text);
-      border: 1px solid color-mix(in oklab, var(--muted), #ffffff 8%);
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      cursor: pointer;
-      z-index: 1000;
-    }
-
-    .debug-toggle:hover {
-      background: color-mix(in oklab, var(--muted), #ffffff 4%);
-    }
-
-    #out-debug {
-      position: fixed;
-      top: 60px;
-      left: 20px;
-      right: 20px;
-      background: var(--muted);
-      color: var(--text);
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 11px;
-      font-family: monospace;
-      max-height: 200px;
-      overflow: auto;
-      z-index: 1000;
-      display: none;
-    }
-
-    #out-debug.show {
-      display: block;
-    }
-  </style>
-
-  <!-- Konfiguration (sätter window.CONFIG), måste laddas innan supa.js används -->
-  <script src="./config.js"></script>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Verifiering – LinkGo</title>
+  <link rel="stylesheet" href="/css/auth.css" />
 </head>
-<body>
-  <!-- Debug toggle -->
-  <button class="debug-toggle" id="debug-toggle">Debug</button>
-  <pre id="out-debug"></pre>
+<body class="verify-page">
+  <div class="main">
+    <div class="center">
+      <img src="/img/linkgologga-gron-transp.png" alt="LinkGo logotyp" class="logo" />
+      <h1>LinkGo</h1>
+    </div>
 
-  <div class="wrap">
-    <main class="card" role="main" aria-labelledby="title">
-      <h1 id="title" class="title">Verifierar...</h1>
-      
-      <p id="message" class="message">
-        Kontrollerar din session...
-      </p>
-
-      <p id="statusline" class="message" style="display:none; font-size:12px; opacity:.85;"></p>
-
-      <div id="buttons" style="display: none;">
-        <a id="btn-role" href="/role.html" class="btn-primary">
-          Välj roll
-        </a>
-
-        <a id="btn-login" href="/login.html" class="btn-secondary">
-          Gå till login
-        </a>
+    <div class="card" style="text-align:center">
+      <p class="ok" id="status">Verifierar…</p>
+      <div class="actions" style="margin-top:14px">
+        <a class="btn btn-primary" href="/role.html">Välj roll</a>
+        <a class="btn btn-ghost" href="/login.html">Logga in</a>
       </div>
-    </main>
+      <p class="note" id="dbg"></p>
+    </div>
   </div>
 
-  <!-- Toast container -->
-  <div id="toast" class="toast"></div>
-
-  <!-- Funktionsscript (ESM) -->
   <script type="module">
-    import supa from '../js/supa.js';
-    
-    const $ = (id) => document.getElementById(id);
-    
-    // Debug functionality
-    const debugEnabled = new URLSearchParams(window.location.search).has('debug');
-    if (debugEnabled) {
-      console.log('[verify] wired', { CONFIG: window.CONFIG, supa });
-    }
-    if (debugEnabled) {
-      $('debug-toggle').textContent = 'Debug ON';
-      $('out-debug').classList.add('show');
-    }
+    import supa from '/js/supa.js';
 
-    // Handle code exchange at the very top
+    const statusEl = document.getElementById('status');
     const params = new URLSearchParams(location.search);
     const code = params.get('code');
+
     if (code) {
       try {
         const { error } = await supa.Auth.exchangeCodeForSession(window.location.href);
         if (error) throw error;
+        statusEl.textContent = 'E-post bekräftad. Du kan gå vidare.';
       } catch (e) {
-        // Show toast after functions are defined
-        setTimeout(() => {
-          showToast(`Kunde inte verifiera: ${e.message || e}`, 'error');
-        }, 100);
+        console.error(e);
+        statusEl.textContent = 'Verifieringen misslyckades. Logga in och försök igen.';
       }
+    } else {
+      // If already logged in, this is still fine
+      statusEl.textContent = 'E-post bekräftad. Du kan gå vidare.';
     }
 
-    function debugLog(message, data = null) {
-      if (!debugEnabled) return;
-      const timestamp = new Date().toISOString().substr(11, 12);
-      const logEntry = `[${timestamp}] ${message}${data ? '\n' + JSON.stringify(data, null, 2) : ''}\n`;
-      $('out-debug').textContent += logEntry;
-      $('out-debug').scrollTop = $('out-debug').scrollHeight;
+    if (location.search.includes('debug=1')) {
+      document.getElementById('dbg').textContent = 'URL: ' + location.href;
     }
-
-    // Toast
-    function showToast(message, type = 'success') {
-      const toast = $('toast');
-      toast.textContent = message;
-      toast.className = `toast ${type}`;
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 4000);
-    }
-
-    // Debug toggle
-    $('debug-toggle')?.addEventListener('click', () => {
-      const isVisible = $('out-debug').classList.contains('show');
-      if (isVisible) {
-        $('out-debug').classList.remove('show');
-        $('debug-toggle').textContent = 'Debug';
-      } else {
-        $('out-debug').classList.add('show');
-        $('debug-toggle').textContent = 'Debug ON';
-      }
-    });
-
-    // Debug output for location and code (after functions are defined)
-    if (debugEnabled) {
-      debugLog('Page load', { location: location.href, hasCode: !!code });
-    }
-
-    // Handle email magic link/code exchange before rendering session state
-    async function init() {
-      const href = window.location.href;
-      const params = new URLSearchParams(location.search);
-      const code = params.get('code');
-      const hasCode = !!code;
-      const hasAccessToken = new URL(href).searchParams.has('access_token') || (location.hash && location.hash.includes('access_token='));
-      let tiny;
-      if (debugEnabled) {
-        tiny = document.createElement('div');
-        tiny.style.cssText = 'font-size:11px; opacity:.8; margin:-8px 0 12px; text-align:center;';
-        tiny.textContent = `href: ${href} | hasCode: ${hasCode} | access_token: ${hasAccessToken}`;
-        document.querySelector('main.card')?.prepend(tiny);
-        debugLog('Landing params', { href, hasCode, hasAccessToken });
-      }
-
-      if (hasCode && typeof supa?.Auth?.exchangeCodeForSession === 'function') {
-        try {
-          const { error } = await supa.Auth.exchangeCodeForSession(window.location.href);
-          if (error) throw error;
-          debugLog('exchangeCodeForSession: success');
-        } catch (e) {
-          debugLog('exchangeCodeForSession: error', e);
-          showToast('Kunde inte verifiera: ' + (e?.message || e), 'error');
-        }
-      }
-
-      // Optional dev: show whether session exists after exchange
-      if (debugEnabled) {
-        try {
-          const { data: postSession } = await supa.Auth.getSession();
-          const hasSessionAfter = !!postSession?.user;
-          tiny.textContent += ` | hasSessionAfter: ${hasSessionAfter}`;
-        } catch {}
-      }
-
-      await checkAuthState();
-    }
-
-    // Check auth state and update UI
-    async function checkAuthState() {
-      debugLog('Checking auth state...');
-      
-      try {
-        const { data: session, error } = await supa.Auth.getSession();
-        
-        debugLog('Session check result', { session, error });
-
-        if (error) {
-          debugLog('Session error', error);
-          showNoSession();
-          return;
-        }
-
-        if (session && session.user) {
-          debugLog('User found in session', { userId: session.user.id, email: session.user.email });
-          // Fetch profile for completeness (role might be needed next)
-          const { data: profile, error: pErr } = await supa.Profiles.getMyProfile();
-          debugLog('Profile fetch', { profile, pErr });
-          if (pErr) {
-            showToast('Inloggad – kunde inte hämta profil', 'error');
-          }
-          showSuccess(session.user.email);
-        } else {
-          debugLog('No active session found');
-          showNoSession();
-        }
-      } catch (err) {
-        debugLog('Auth check failed', err);
-        showNoSession();
-      }
-    }
-
-    function showSuccess(email) {
-      $('title').textContent = 'E-post bekräftad';
-      $('title').className = 'title success';
-      $('message').textContent = 'Din e-post har bekräftats! Du kan nu välja din roll och komma igång.';
-      $('buttons').style.display = 'block';
-      $('btn-role').style.display = 'inline-block';
-      $('btn-login').style.display = 'none';
-      if (email) {
-        const s = $('statusline');
-        s.style.display = 'block';
-        s.textContent = `Inloggad som ${email}`;
-      }
-    }
-
-    function showNoSession() {
-      $('title').textContent = 'Ingen aktiv session';
-      $('title').className = 'title error';
-      $('message').textContent = 'Ingen aktiv session – logga in för att fortsätta.';
-      $('buttons').style.display = 'block';
-      $('btn-role').style.display = 'none';
-      $('btn-login').style.display = 'inline-block';
-    }
-
-    // Run init on page load
-    debugLog('Page initialized, handling code exchange (if any) and checking auth state...');
-    init();
   </script>
 </body>
 </html>

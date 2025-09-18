@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LinkGo – Katalog</title>
-    <link rel="stylesheet" href="./tokens.css">
+    <link rel="stylesheet" href="/css/tokens.css">
     <script src="./config.js"></script>
     <style>
         * {
@@ -454,7 +454,10 @@
     </div>
 
     <script type="module">
-        import supa from '../js/supa.js';
+        import supa from '/js/supa.js';
+        
+        // Protect page - require manager role
+        await supa.Auth.protectPage('manager');
 
         // State management
         const state = {
@@ -536,7 +539,7 @@
                 sessionActions.innerHTML = '<button onclick="onLogout()">Logout</button>';
             } else {
                 sessionInfo.innerHTML = 'Not signed in';
-                sessionActions.innerHTML = '<a href="login.html">Login</a> • <a href="dev-auth.html">Dev Auth</a>';
+                sessionActions.innerHTML = '<a href="/login.html">Login</a> • <a href="/dev-auth.html">Dev Auth</a>';
             }
         }
 
@@ -624,7 +627,7 @@
                 <div class="error-card">
                     <h2>Du är inte inloggad</h2>
                     <p>Logga in för att komma åt katalogen</p>
-                    <a href="login.html">Logga in här</a>
+                    <a href="/login.html">Logga in här</a>
                 </div>
             `;
         }

@@ -56,7 +56,10 @@
     </div>
 
     <script type="module">
-        import supa from '../js/supa.js';
+        import supa from '/js/supa.js';
+        
+        // Require session
+        supa.Auth.requireSession();
 
         const urlParams = new URLSearchParams(window.location.search);
         const debug = urlParams.get('debug') === '1';

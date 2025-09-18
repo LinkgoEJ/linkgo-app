@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkGo – Hem</title>
+    <link rel="stylesheet" href="./tokens.css">
+    <script src="./config.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: var(--l);
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--xl);
+            padding-bottom: var(--l);
+            border-bottom: 1px solid var(--muted);
+        }
+        .header h1 {
+            margin: 0;
+            color: var(--primary);
+        }
+        .header button {
+            padding: var(--s) var(--m);
+            border: 1px solid var(--muted);
+            background: var(--surface);
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .header button:hover {
+            background: var(--muted);
+        }
+        #me {
+            background: var(--surface);
+            border: 1px solid var(--muted);
+            border-radius: 8px;
+            padding: var(--l);
+            font-family: monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>LinkGo – Hem</h1>
+        <button id="btn-logout">Logga ut</button>
+    </header>
+
+    <div id="me"></div>
+
+    <script type="module">
+        import supa from '../js/supa.js';
+        
+        await supa.Auth.requireSession();
+        const me = await supa.Profiles.getMyProfile();
+        document.getElementById('me').textContent = JSON.stringify(me, null, 2);
+        
+        document.getElementById('btn-logout').onclick = async () => {
+            await supa.Auth.signOut();
+            location.href = './login.html';
+        };
+    </script>
+</body>
+</html>
