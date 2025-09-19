@@ -6,6 +6,7 @@
   <title>Logga in – LinkGo</title>
   <link rel="stylesheet" href="./tokens.css" />
   <script src="./config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body {
       margin: 0;
@@ -134,21 +135,38 @@
       </form>
     </div>
   </div>
+  <div id="debug" style="font:12px/1.2 system-ui; background:#f3f4f6; padding:8px; border-radius:6px; margin-top:8px; display:none"></div>
 
   <script type="module">
 import supa from '../js/supa.js';
 const $ = (sel, root=document) => root.querySelector(sel);
+const msg = $('#msg') || (() => { const p = document.createElement('p'); p.id='msg'; p.style.marginTop='8px'; (document.querySelector('form')||document.body).appendChild(p); return p; })();
+const setMsg = (t,c='') => { msg.textContent = t || ''; msg.className = c; };
 
-// Diskret statusfält om det saknas
-let msg = document.getElementById('msg');
-if (!msg) {
-  msg = document.createElement('p');
-  msg.id = 'msg';
-  msg.style.marginTop = '8px';
-  msg.style.minHeight = '1.2em';
-  (document.querySelector('form') || document.body).appendChild(msg);
+const dbg = $('#debug');
+if (window.CONFIG?.DEBUG) dbg.style.display = 'block';
+
+function renderDebug(extra={}) {
+  if (!dbg) return;
+  const safeKey = (k) => k ? (k.slice(0,8)+'…'+k.slice(-4)) : '';
+  dbg.innerHTML = `
+    <div><strong>origin:</strong> ${location.origin}</div>
+    <div><strong>cfg.url:</strong> ${window.CONFIG?.SUPABASE_URL||'❌'}</div>
+    <div><strong>cfg.key:</strong> ${window.CONFIG?.SUPABASE_ANON_KEY ? 'set ('+safeKey(window.CONFIG.SUPABASE_ANON_KEY)+')' : '❌'}</div>
+    <div><strong>health:</strong> ${extra.health || '-'}</div>
+    <div><strong>session:</strong> ${extra.session ? '✅' : '–'}</div>
+  `;
 }
-const setMsg = (t, cls='') => { msg.textContent = t || ''; msg.className = cls; };
+
+(async () => {
+  try {
+    const hc = await supa.Auth.healthCheck();
+    renderDebug({ health: hc.ok ? 'ok' : ('fail: ' + (hc.error||'')), session: hc.session });
+  } catch (e) {
+    console.error('healthCheck error', e);
+    renderDebug({ health: 'exception' });
+  }
+})();
 
 const form = document.querySelector('form') || document;
 const emailEl = $('#email', form);
@@ -156,7 +174,7 @@ const passEl  = $('#password', form);
 const btn     = $('#btn-login', form) || form.querySelector('button[type="submit"]') || form.querySelector('button');
 
 const onSubmit = async (e) => {
-  if (e) e.preventDefault(); // ingen sidladdning => inputs behålls
+  if (e) e.preventDefault();
   if (btn) btn.disabled = true;
   setMsg('Loggar in…','info');
   const email = emailEl?.value?.trim();
@@ -168,7 +186,7 @@ const onSubmit = async (e) => {
       if (code === 'invalid_credentials') setMsg('Fel e-post eller lösenord.','error');
       else if (/confirm|verified|not[_\s-]*confirmed/i.test(error.message)) setMsg('Bekräfta din e-post via länken vi skickat.','error');
       else setMsg(error.message || 'Kunde inte logga in.','error');
-      return; // behåll inmatningar
+      return;
     }
     if (session) { supa.Auth.redirectToHome(); return; }
     setMsg('Oväntat läge – prova igen.','error');

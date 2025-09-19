@@ -6,6 +6,7 @@
   <title>Skapa konto – LinkGo</title>
   <link rel="stylesheet" href="./tokens.css" />
   <script src="./config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body {
       margin: 0;
@@ -127,21 +128,28 @@
       </form>
     </div>
   </div>
+  <div id="debug" style="font:12px/1.2 system-ui; background:#f3f4f6; padding:8px; border-radius:6px; margin-top:8px; display:none"></div>
 
   <script type="module">
 import supa from '../js/supa.js';
 const $ = (sel, root=document) => root.querySelector(sel);
+const msg = $('#msg') || (() => { const p = document.createElement('p'); p.id='msg'; p.style.marginTop='8px'; (document.querySelector('form')||document.body).appendChild(p); return p; })();
+const setMsg = (t,c='') => { msg.textContent = t || ''; msg.className = c; };
 
-// Diskret statusfält om det saknas
-let msg = document.getElementById('msg');
-if (!msg) {
-  msg = document.createElement('p');
-  msg.id = 'msg';
-  msg.style.marginTop = '8px';
-  msg.style.minHeight = '1.2em';
-  (document.querySelector('form') || document.body).appendChild(msg);
+const dbg = $('#debug');
+if (window.CONFIG?.DEBUG) dbg.style.display = 'block';
+function renderDebug(extra={}) {
+  if (!dbg) return;
+  const safeKey = (k) => k ? (k.slice(0,8)+'…'+k.slice(-4)) : '';
+  dbg.innerHTML = `
+    <div><strong>origin:</strong> ${location.origin}</div>
+    <div><strong>cfg.url:</strong> ${window.CONFIG?.SUPABASE_URL||'❌'}</div>
+    <div><strong>cfg.key:</strong> ${window.CONFIG?.SUPABASE_ANON_KEY ? 'set ('+safeKey(window.CONFIG.SUPABASE_ANON_KEY)+')' : '❌'}</div>
+    <div><strong>note:</strong> signUp visar “bekräfta e-post” om session ej sätts och error saknas.</div>
+  `;
 }
-const setMsg = (t, cls='') => { msg.textContent = t || ''; msg.className = cls; };
+
+renderDebug();
 
 const form = document.querySelector('form') || document;
 const emailEl = $('#email', form);
@@ -150,7 +158,7 @@ const nameEl  = $('#full_name', form);
 const btn     = $('#btn-signup', form) || form.querySelector('button[type="submit"]') || form.querySelector('button');
 
 const onSubmit = async (e) => {
-  if (e) e.preventDefault(); // ingen sidladdning => inputs behålls
+  if (e) e.preventDefault();
   if (btn) btn.disabled = true;
   setMsg('Skapar konto…','info');
   const email = emailEl?.value?.trim();
@@ -159,23 +167,18 @@ const onSubmit = async (e) => {
 
   try {
     const res = await supa.Auth.signUpWithEmail({ email, password, data: { full_name } });
-
-    // Konto finns redan → försök logga in
     if (res?.error?.code === 'user_already_registered' || /already/i.test(res?.error?.message||'')) {
       const { session, error: loginErr } = await supa.Auth.signInWithPassword({ email, password });
       if (!loginErr && session) { supa.Auth.redirectToHome(); return; }
       setMsg('Kontot finns redan men lösenordet matchar inte. Prova att logga in eller återställ lösenordet.','error');
       return;
     }
-
     if (res.needsConfirmation) {
       setMsg(`Vi har skickat ett bekräftelsemail till ${email}. Bekräfta och logga in.`,'ok');
-      return; // stanna kvar, inputs behålls
+      return;
     }
-
     if (res.session) { supa.Auth.redirectToHome(); return; }
     setMsg('Oväntat läge – prova att logga in.','error');
-
   } catch (err) {
     console.error(err); setMsg('Tekniskt fel vid registrering.','error');
   } finally {
