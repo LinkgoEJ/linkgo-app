@@ -129,57 +129,62 @@
   </div>
 
   <script type="module">
-    import supa from '../js/supa.js';
-    const $ = (sel, root=document) => root.querySelector(sel);
+import supa from '../js/supa.js';
+const $ = (sel, root=document) => root.querySelector(sel);
 
-    let msg = $('#msg');
-    if (!msg) {
-      msg = document.createElement('p');
-      msg.id = 'msg';
-      msg.style.marginTop = '8px';
-      msg.style.minHeight = '1.2em';
-      const host = document.querySelector('form') || document.body;
-      host.appendChild(msg);
+// Diskret statusfält om det saknas
+let msg = document.getElementById('msg');
+if (!msg) {
+  msg = document.createElement('p');
+  msg.id = 'msg';
+  msg.style.marginTop = '8px';
+  msg.style.minHeight = '1.2em';
+  (document.querySelector('form') || document.body).appendChild(msg);
+}
+const setMsg = (t, cls='') => { msg.textContent = t || ''; msg.className = cls; };
+
+const form = document.querySelector('form') || document;
+const emailEl = $('#email', form);
+const passEl  = $('#password', form);
+const nameEl  = $('#full_name', form);
+const btn     = $('#btn-signup', form) || form.querySelector('button[type="submit"]') || form.querySelector('button');
+
+const onSubmit = async (e) => {
+  if (e) e.preventDefault(); // ingen sidladdning => inputs behålls
+  if (btn) btn.disabled = true;
+  setMsg('Skapar konto…','info');
+  const email = emailEl?.value?.trim();
+  const password = passEl?.value || '';
+  const full_name = nameEl?.value?.trim() || null;
+
+  try {
+    const res = await supa.Auth.signUpWithEmail({ email, password, data: { full_name } });
+
+    // Konto finns redan → försök logga in
+    if (res?.error?.code === 'user_already_registered' || /already/i.test(res?.error?.message||'')) {
+      const { session, error: loginErr } = await supa.Auth.signInWithPassword({ email, password });
+      if (!loginErr && session) { supa.Auth.redirectToHome(); return; }
+      setMsg('Kontot finns redan men lösenordet matchar inte. Prova att logga in eller återställ lösenordet.','error');
+      return;
     }
-    const setMsg = (t, cls='') => { msg.textContent = t || ''; msg.className = cls; };
 
-    const form = document.querySelector('form') || document;
-    const emailEl = $('#email', form);
-    const passEl  = $('#password', form);
-    const nameEl  = $('#full_name', form);
-    const btn     = $('#btn-signup', form) || form.querySelector('button[type="submit"]') || form.querySelector('button');
+    if (res.needsConfirmation) {
+      setMsg(`Vi har skickat ett bekräftelsemail till ${email}. Bekräfta och logga in.`,'ok');
+      return; // stanna kvar, inputs behålls
+    }
 
-    const onSubmit = async (e) => {
-      if (e) e.preventDefault();               // ingen sidladdning → fälten rensas inte
-      if (btn) btn.disabled = true;
-      setMsg('Skapar konto…', 'info');
-      const email = emailEl?.value?.trim();
-      const password = passEl?.value || '';
-      const full_name = nameEl?.value?.trim() || null;
-      try {
-        const res = await supa.Auth.signUpWithEmail({ email, password, data: { full_name } });
-        // Om kontot redan finns → försöka logga in med samma lösen
-        if (res?.error?.code === 'user_already_registered' || /already/i.test(res?.error?.message||'')) {
-          const { session, error: loginErr } = await supa.Auth.signInWithPassword({ email, password });
-          if (!loginErr && session) { supa.Auth.redirectToHome(); return; }
-          setMsg('Kontot finns redan men lösenordet matchar inte. Prova att logga in eller återställ lösenordet.', 'error');
-          return;
-        }
-        if (res.needsConfirmation) {
-          setMsg(`Vi har skickat ett bekräftelsemail till ${email}. Bekräfta och logga in.`, 'ok');
-          return; // behåll värden, ingen redirect förrän bekräftad
-        }
-        if (res.session) { supa.Auth.redirectToHome(); return; }
-        setMsg('Oväntat läge – prova att logga in.', 'error');
-      } catch (err) {
-        console.error(err); setMsg('Tekniskt fel vid registrering.', 'error');
-      } finally {
-        if (btn) btn.disabled = false;
-      }
-    };
+    if (res.session) { supa.Auth.redirectToHome(); return; }
+    setMsg('Oväntat läge – prova att logga in.','error');
 
-    if (btn) btn.addEventListener('click', onSubmit);
-    if (form && form.tagName === 'FORM') form.addEventListener('submit', onSubmit);
-  </script>
+  } catch (err) {
+    console.error(err); setMsg('Tekniskt fel vid registrering.','error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+};
+
+if (btn) btn.addEventListener('click', onSubmit);
+if (form && form.tagName === 'FORM') form.addEventListener('submit', onSubmit);
+</script>
 </body>
 </html>
