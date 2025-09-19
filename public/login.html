@@ -136,56 +136,51 @@
   </div>
 
   <script type="module">
-    import supa from '../js/supa.js';
+import supa from '../js/supa.js';
+const $ = (sel, root=document) => root.querySelector(sel);
 
-    const $ = (sel, root=document) => root.querySelector(sel);
+// Diskret statusfält om det saknas
+let msg = document.getElementById('msg');
+if (!msg) {
+  msg = document.createElement('p');
+  msg.id = 'msg';
+  msg.style.marginTop = '8px';
+  msg.style.minHeight = '1.2em';
+  (document.querySelector('form') || document.body).appendChild(msg);
+}
+const setMsg = (t, cls='') => { msg.textContent = t || ''; msg.className = cls; };
 
-    // 1) Skapa/återanvänd ett meddelandefält utan att störa design
-    let msg = $('#msg');
-    if (!msg) {
-      msg = document.createElement('p');
-      msg.id = 'msg';
-      msg.style.marginTop = '8px';
-      msg.style.minHeight = '1.2em';
-      const host = document.querySelector('form') || document.body;
-      host.appendChild(msg);
+const form = document.querySelector('form') || document;
+const emailEl = $('#email', form);
+const passEl  = $('#password', form);
+const btn     = $('#btn-login', form) || form.querySelector('button[type="submit"]') || form.querySelector('button');
+
+const onSubmit = async (e) => {
+  if (e) e.preventDefault(); // ingen sidladdning => inputs behålls
+  if (btn) btn.disabled = true;
+  setMsg('Loggar in…','info');
+  const email = emailEl?.value?.trim();
+  const password = passEl?.value || '';
+  try {
+    const { session, error } = await supa.Auth.signInWithPassword({ email, password });
+    if (error) {
+      const code = error.code || '';
+      if (code === 'invalid_credentials') setMsg('Fel e-post eller lösenord.','error');
+      else if (/confirm|verified|not[_\s-]*confirmed/i.test(error.message)) setMsg('Bekräfta din e-post via länken vi skickat.','error');
+      else setMsg(error.message || 'Kunde inte logga in.','error');
+      return; // behåll inmatningar
     }
-    const setMsg = (t, cls='') => { msg.textContent = t || ''; msg.className = cls; };
+    if (session) { supa.Auth.redirectToHome(); return; }
+    setMsg('Oväntat läge – prova igen.','error');
+  } catch (err) {
+    console.error(err); setMsg('Tekniskt fel vid inloggning.','error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+};
 
-    // 2) Hitta inputs och knappar utan att ändra DOM-struktur
-    const form = document.querySelector('form') || document;
-    const emailEl = $('#email', form);
-    const passEl  = $('#password', form);
-    const btn     = $('#btn-login', form) || form.querySelector('button[type="submit"]') || form.querySelector('button');
-
-    // 3) Säker bindning – vi rör inga klasser/stilar
-    const onSubmit = async (e) => {
-      if (e) e.preventDefault();               // ingen sidladdning → fält rensas inte
-      if (btn) btn.disabled = true;
-      setMsg('Loggar in…', 'info');
-      const email = emailEl?.value?.trim();
-      const password = passEl?.value || '';
-      try {
-        const { session, error } = await supa.Auth.signInWithPassword({ email, password });
-        if (error) {
-          const code = error.code || '';
-          if (code === 'invalid_credentials') setMsg('Fel e-post eller lösenord.', 'error');
-          else if (/confirm|verified|not[_\s-]*confirmed/i.test(error.message)) setMsg('Bekräfta din e-post via länken vi skickat.', 'error');
-          else setMsg(error.message || 'Kunde inte logga in.', 'error');
-          return; // behåll inmatade värden
-        }
-        if (session) { supa.Auth.redirectToHome(); return; }
-        setMsg('Oväntat läge – prova igen.', 'error');
-      } catch (err) {
-        console.error(err); setMsg('Tekniskt fel vid inloggning.', 'error');
-      } finally {
-        if (btn) btn.disabled = false;
-      }
-    };
-
-    // 4) Bind både knapp och form – utan att ändra deras typ/utseende
-    if (btn) btn.addEventListener('click', onSubmit);
-    if (form && form.tagName === 'FORM') form.addEventListener('submit', onSubmit);
-  </script>
+if (btn) btn.addEventListener('click', onSubmit);
+if (form && form.tagName === 'FORM') form.addEventListener('submit', onSubmit);
+</script>
 </body>
 </html>

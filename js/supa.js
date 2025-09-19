@@ -12,60 +12,49 @@ const CFG = {
 // --- Client ---
 const supabase = createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
 
-// --- Helpers ---
-const getCurrentUser = () => {
-  const { data: { user } } = supabase.auth.getUser();
-  return user;
-};
-
-const assertLoggedIn = () => {
-  const user = getCurrentUser();
-  if (!user) throw new Error('Not authenticated');
-  return user;
-};
-
-// --- Auth Module ---
-export const Auth = {
+const Auth = {
   async getSession() {
     const { data, error } = await supabase.auth.getSession();
     if (error) throw error;
     return { session: data.session, user: data.session?.user || null };
   },
-
   async signInWithPassword({ email, password }) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     return { session: data?.session || null, user: data?.user || null, error };
   },
-
   async signUpWithEmail({ email, password, data }) {
-    const { data:res, error } = await supabase.auth.signUp({ email, password, options: { data } });
+    const { data: res, error } = await supabase.auth.signUp({
+      email, password, options: { data }
+    });
     const session = res?.session || null;
     const user = res?.user || null;
-    const needsConfirmation = !session && !error && !!user; // klassiskt Supabase-flöde
+    const needsConfirmation = !session && !error && !!user;
     return { user, session, error, needsConfirmation };
   },
-
   async signOut() {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   },
-
-  redirectToHome() { 
-    location.href = './home.html'; 
+  redirectToHome() { location.href = './home.html'; },
+  async requireSession() {
+    const { session } = await this.getSession();
+    if (!session) location.href = './login.html';
   }
 };
 
-// --- Profiles Module ---
-export const Profiles = {
+const Profiles = {
   async getMyProfile() {
     const { data: sessionData } = await supabase.auth.getSession();
     const uid = sessionData?.session?.user?.id;
     if (!uid) return null;
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).single();
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', uid)
+      .single();
     if (error) throw error;
     return data;
   }
 };
 
-// --- Default Export ---
 export default { Auth, Profiles };
